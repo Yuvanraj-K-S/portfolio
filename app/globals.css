@@ -1,6 +1,7 @@
+@import url("https://fonts.googleapis.com/css2?family=Honk:MORF@15&family=Monofett&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap");
+
 @import "tailwindcss";
 
-@import url("https://fonts.googleapis.com/css2?family=Honk:MORF@15&family=Monofett&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap");
 
 :root {
   --bg: #080810;
