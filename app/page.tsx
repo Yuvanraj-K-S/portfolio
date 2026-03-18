@@ -11,7 +11,6 @@ import Experience from "@/components/sections/Experience";
 import Certifications from "@/components/sections/Certifications";
 import Achievements from "@/components/sections/Achievements";
 import Contact from "@/components/sections/Contact";
-import Marquee from "@/components/ui/Marquee";
 
 export default function Home() {
   return (
@@ -21,19 +20,19 @@ export default function Home() {
       <Loader />
 
       <section id="hero"><Hero /></section>
-      <Marquee />
+      
       <section id="about"><About /></section>
-      <Marquee />
+      
       <section id="projects"><Projects /></section>
-      <Marquee />
+      
       <section id="skills"><Skills /></section>
-      <Marquee />
+      
       <section id="experience"><Experience /></section>
-      <Marquee />
+      
       <section id="certifications"><Certifications /></section>
-      <Marquee />
+      
       <section id="achievements"><Achievements /></section>
-      <Marquee />
+      
       <section id="contact"><Contact /></section>
     </main>
   );

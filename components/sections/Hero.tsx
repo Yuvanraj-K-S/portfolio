@@ -1,191 +1,307 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
+import { motion } from "framer-motion";
+import { Canvas, useFrame } from "@react-three/fiber";
+import * as THREE from "three";
+import { siteConfig } from "@/lib/data";
 
-export default function Loader() {
-  const [progress, setProgress]   = useState(0);
-  const [done, setDone]           = useState(false);
-  const [visible, setVisible]     = useState(true);
-  const walkPhase                 = useRef(0);
-  const rafRef                    = useRef<number>(0);
-  const legLRef                   = useRef<SVGLineElement>(null);
-  const legRRef                   = useRef<SVGLineElement>(null);
-  const footLRef                  = useRef<SVGEllipseElement>(null);
-  const footRRef                  = useRef<SVGEllipseElement>(null);
-  const armLRef                   = useRef<SVGLineElement>(null);
-  const armRRef                   = useRef<SVGLineElement>(null);
+/* ─────────────────────────────────────────────
+   Dino 3D billboard
+   Uses THREE.TextureLoader directly — avoids
+   useTexture/drei issues with Turbopack
+───────────────────────────────────────────── */
+function Dino3D() {
+  const meshRef   = useRef<THREE.Mesh>(null);
+  const mouse     = useRef({ x: 0, y: 0 });
+  const [hovered, setHovered]   = useState(false);
+  const [texture,  setTexture]  = useState<THREE.Texture | null>(null);
 
-  const finish = () => {
-    if (done) return;
-    setDone(true);
-    setProgress(100);
-    setTimeout(() => setVisible(false), 700);
-  };
-
-  // Progress bar
+  // Load texture manually — no useTexture
   useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 95) { clearInterval(interval); return 95; }
-        return p + Math.random() * 4 + 1;
-      });
-    }, 80);
-
-    // Min 1.5s
-    const timeout = setTimeout(finish, 1500 + Math.random() * 800);
-
-    return () => { clearInterval(interval); clearTimeout(timeout); };
+    const loader = new THREE.TextureLoader();
+    loader.load(
+      "../../public/dino.png",
+      (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        setTexture(tex);
+      },
+      undefined,
+      (err) => console.error("Dino texture failed:", err)
+    );
   }, []);
 
-  // Walker animation
+  // Mouse tracking
   useEffect(() => {
-    const animate = () => {
-      if (done) return;
-      walkPhase.current += 0.12;
-      const sw = Math.sin(walkPhase.current);
-
-      if (legLRef.current)  legLRef.current.setAttribute("x2",  String(26 + sw * 12));
-      if (legRRef.current)  legRRef.current.setAttribute("x2",  String(54 - sw * 12));
-      if (footLRef.current) footLRef.current.setAttribute("cx", String(23 + sw * 12));
-      if (footRRef.current) footRRef.current.setAttribute("cx", String(57 - sw * 12));
-      if (armLRef.current)  armLRef.current.setAttribute("x2",  String(14 - sw * 8));
-      if (armRRef.current)  armRRef.current.setAttribute("x2",  String(66 + sw * 8));
-
-      rafRef.current = requestAnimationFrame(animate);
+    const onMove = (e: MouseEvent) => {
+      mouse.current.x =  e.clientX / window.innerWidth  - 0.5;
+      mouse.current.y =  e.clientY / window.innerHeight - 0.5;
     };
-    rafRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [done]);
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, []);
 
-  // Skip on click or keydown
-  useEffect(() => {
-    const skip = () => finish();
-    document.addEventListener("keydown", skip);
-    document.addEventListener("click",   skip);
-    return () => {
-      document.removeEventListener("keydown", skip);
-      document.removeEventListener("click",   skip);
-    };
-  }, [done]);
+  useFrame(() => {
+    const m = meshRef.current;
+    if (!m) return;
 
-  if (!visible) return null;
+    // Smooth cursor tilt
+    m.rotation.y = THREE.MathUtils.lerp(m.rotation.y,  mouse.current.x * 0.45, 0.05);
+    m.rotation.x = THREE.MathUtils.lerp(m.rotation.x, -mouse.current.y * 0.28, 0.05);
+
+    // Idle float
+    m.position.y = Math.sin(Date.now() * 0.0018) * 0.12;
+
+    // Hover wave
+    if (hovered) {
+      m.rotation.z = Math.sin(Date.now() * 0.009) * 0.12;
+    } else {
+      m.rotation.z = THREE.MathUtils.lerp(m.rotation.z, 0, 0.08);
+    }
+  });
+
+  // Don't render mesh until texture is ready
+  if (!texture) return null;
 
   return (
-    <div
+    <mesh
+      ref={meshRef}
+      onPointerOver={() => setHovered(true)}
+      onPointerOut={()  => setHovered(false)}
+    >
+      <planeGeometry args={[3.2, 3.2]} />
+      <meshStandardMaterial
+        map={texture}
+        transparent
+        alphaTest={0.05}
+        side={THREE.FrontSide}
+      />
+    </mesh>
+  );
+}
+
+function DinoCanvas() {
+  return (
+    <Canvas
+      camera={{ position: [0, 0, 5], fov: 50 }}
+      style={{ background: "transparent" }}
+      gl={{ alpha: true, antialias: true }}
+    >
+      <ambientLight intensity={1.2} />
+      <directionalLight position={[2, 3, 5]} intensity={0.8} />
+      <Suspense fallback={null}>
+        <Dino3D />
+      </Suspense>
+    </Canvas>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Hero Section
+───────────────────────────────────────────── */
+export default function Hero() {
+  const nameRef = useRef<HTMLHeadingElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
+
+  // Name parallax
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!nameRef.current) return;
+      const dx = (e.clientX / window.innerWidth  - 0.5) * 14;
+      const dy = (e.clientY / window.innerHeight - 0.5) *  7;
+      nameRef.current.style.transform =
+        `perspective(600px) rotateY(${dx}deg) rotateX(${-dy}deg)`;
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, []);
+
+  const scrollTo = (id: string) =>
+    document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
+
+  return (
+    <section
+      ref={heroRef}
       style={{
-        position: "fixed",
-        inset: 0,
+        position: "relative",
+        width: "100%",
+        height: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
         background: "var(--bg)",
+      }}
+    >
+      {/* Subtle radial glow */}
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        background: "radial-gradient(ellipse 65% 55% at 50% 50%, rgba(176,42,58,0.06) 0%, transparent 70%)",
+        pointerEvents: "none",
+        zIndex: 0,
+      }} />
+
+      {/* ── LAYOUT: text left, dino right ── */}
+      <div style={{
+        position: "relative",
+        zIndex: 2,
+        width: "100%",
+        maxWidth: 1200,
+        padding: "0 48px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 32,
+      }}>
+
+        {/* LEFT: text */}
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}
+        >
+          {/* Role — DM Sans */}
+          <p style={{
+            fontFamily: "var(--font-body)",
+            fontSize: 13,
+            color: "var(--secondary)",
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            fontWeight: 500,
+          }}>
+            {siteConfig.role}
+          </p>
+
+          {/* Name — Honk */}
+          <h1
+            ref={nameRef}
+            className="holo-text"
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(52px, 9vw, 120px)",
+              lineHeight: 0.92,
+              color: "var(--body)",
+              userSelect: "none",
+              transition: "transform 0.1s ease",
+              fontVariationSettings: "'MORF' 15, 'SHLN' 50",
+            }}
+          >
+            {siteConfig.name.split(" ")[0].toUpperCase()}
+          </h1>
+
+          {/* Punchline — Monofett */}
+          <p style={{
+            fontFamily: "var(--font-ui)",
+            fontSize: "clamp(11px, 1.4vw, 15px)",
+            color: "var(--muted)",
+            letterSpacing: "0.05em",
+            marginTop: 8,
+            maxWidth: 420,
+            lineHeight: 1.6,
+          }}>
+            {siteConfig.punchline}
+          </p>
+
+          {/* CTAs — Monofett */}
+          <div style={{ display: "flex", gap: 14, marginTop: 28, flexWrap: "wrap" }}>
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => scrollTo("#projects")}
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: 12,
+                letterSpacing: "0.1em",
+                padding: "13px 34px",
+                borderRadius: 100,
+                border: "none",
+                background: "linear-gradient(135deg, var(--primary), var(--cta))",
+                color: "#F5EFFF",
+                cursor: "none",
+              }}
+            >
+              VIEW WORK
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
+              onClick={() => scrollTo("#contact")}
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: 12,
+                letterSpacing: "0.1em",
+                padding: "13px 34px",
+                borderRadius: 100,
+                background: "transparent",
+                border: "1.5px solid rgba(59,42,94,0.35)",
+                color: "var(--secondary)",
+                cursor: "none",
+              }}
+            >
+              CONTACT ME
+            </motion.button>
+          </div>
+        </motion.div>
+
+        {/* RIGHT: Dino canvas */}
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+          style={{
+            width: "min(420px, 42vw)",
+            height: "min(420px, 42vw)",
+            flexShrink: 0,
+          }}
+        >
+          <DinoCanvas />
+        </motion.div>
+      </div>
+
+      {/* Scroll indicator */}
+      <div style={{
+        position: "absolute",
+        bottom: 36,
+        left: "50%",
+        transform: "translateX(-50%)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        zIndex: 9990,
-        opacity: done ? 0 : 1,
-        transition: "opacity 0.6s ease",
-      }}
-    >
-      {/* Walker */}
-      <div style={{ marginBottom: 32 }}>
-        <svg
-          viewBox="0 0 80 100"
-          width={80}
-          height={100}
-          fill="none"
-          style={{ animation: "bob 0.4s ease-in-out infinite alternate" }}
-        >
-          {/* Body */}
-          <ellipse cx="40" cy="38" rx="16" ry="18" fill="#7045AF" />
-          {/* Head */}
-          <circle cx="40" cy="16" r="12" fill="#0AC4E0" />
-          {/* Eyes */}
-          <circle cx="36" cy="14" r="2.5" fill="#080810" />
-          <circle cx="44" cy="14" r="2.5" fill="#080810" />
-          {/* Glints */}
-          <circle cx="37" cy="13" r="1" fill="#F6E7BC" />
-          <circle cx="45" cy="13" r="1" fill="#F6E7BC" />
-          {/* Mouth */}
-          <path
-            d="M35 20 Q40 24 45 20"
-            stroke="#080810"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-          {/* Arms */}
-          <line ref={armLRef} x1="25" y1="38" x2="14" y2="52"
-            stroke="#E14594" strokeWidth="4" strokeLinecap="round" />
-          <line ref={armRRef} x1="55" y1="38" x2="66" y2="52"
-            stroke="#E14594" strokeWidth="4" strokeLinecap="round" />
-          {/* Legs */}
-          <line ref={legLRef} x1="34" y1="56" x2="26" y2="76"
-            stroke="#7045AF" strokeWidth="5" strokeLinecap="round" />
-          <ellipse ref={footLRef} cx="23" cy="79" rx="8" ry="4" fill="#7045AF" />
-          <line ref={legRRef} x1="46" y1="56" x2="54" y2="76"
-            stroke="#7045AF" strokeWidth="5" strokeLinecap="round" />
-          <ellipse ref={footRRef} cx="57" cy="79" rx="8" ry="4" fill="#7045AF" />
-        </svg>
-
-        {/* Ground shadow */}
-        <div
-          style={{
-            width: 60,
-            height: 8,
-            margin: "4px auto 0",
-            background:
-              "radial-gradient(ellipse, rgba(112,69,175,0.4) 0%, transparent 70%)",
-            animation: "bob 0.4s ease-in-out infinite alternate",
-          }}
-        />
-      </div>
-
-      {/* Progress bar */}
-      <div
-        style={{
-          width: 220,
-          height: 2,
-          background: "rgba(246,231,188,0.1)",
-          borderRadius: 2,
+        gap: 6,
+        zIndex: 2,
+      }}>
+        <div style={{
+          width: 22,
+          height: 34,
+          border: "1.5px solid rgba(26,26,46,0.2)",
+          borderRadius: 12,
+          position: "relative",
           overflow: "hidden",
-          marginBottom: 16,
-        }}
-      >
-        <div
-          style={{
-            height: "100%",
-            width: `${Math.min(progress, 100)}%`,
-            background: "var(--secondary)",
+        }}>
+          <div style={{
+            width: 3,
+            height: 6,
+            background: "var(--primary)",
             borderRadius: 2,
-            boxShadow: "0 0 6px var(--secondary)",
-            transition: "width 0.1s linear",
-          }}
-        />
+            position: "absolute",
+            top: 6,
+            left: "50%",
+            transform: "translateX(-50%)",
+            animation: "scroll-down 2s ease infinite",
+          }} />
+        </div>
+        <span style={{
+          fontFamily: "var(--font-ui)",
+          fontSize: 10,
+          color: "var(--muted)",
+          letterSpacing: "0.12em",
+        }}>
+          SCROLL
+        </span>
       </div>
-
-      {/* Loading text */}
-      <p
-        style={{
-          fontFamily: "var(--font-ui)",
-          fontSize: 13,
-          color: "var(--muted)",
-          letterSpacing: "0.1em",
-        }}
-      >
-        Loading...
-      </p>
-
-      {/* Skip hint */}
-      <p
-        style={{
-          position: "absolute",
-          bottom: 32,
-          fontFamily: "var(--font-ui)",
-          fontSize: 11,
-          color: "var(--muted)",
-          letterSpacing: "0.08em",
-        }}
-      >
-        Press any key or click to skip
-      </p>
-    </div>
+    </section>
   );
 }

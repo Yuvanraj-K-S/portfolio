@@ -95,34 +95,34 @@ export default function Loader() {
           style={{ animation: "bob 0.4s ease-in-out infinite alternate" }}
         >
           {/* Body */}
-          <ellipse cx="40" cy="38" rx="16" ry="18" fill="#7045AF" />
+          <ellipse cx="40" cy="38" rx="16" ry="18" fill="#B02A3A" />
           {/* Head */}
-          <circle cx="40" cy="16" r="12" fill="#0AC4E0" />
+          <circle cx="40" cy="16" r="12" fill="#3B2A5E" />
           {/* Eyes */}
-          <circle cx="36" cy="14" r="2.5" fill="#080810" />
-          <circle cx="44" cy="14" r="2.5" fill="#080810" />
+          <circle cx="36" cy="14" r="2.5" fill="#F5EFFF" />
+          <circle cx="44" cy="14" r="2.5" fill="#F5EFFF" />
           {/* Glints */}
-          <circle cx="37" cy="13" r="1" fill="#F6E7BC" />
-          <circle cx="45" cy="13" r="1" fill="#F6E7BC" />
+          <circle cx="37" cy="13" r="1" fill="#1A1A2E" />
+          <circle cx="45" cy="13" r="1" fill="#1A1A2E" />
           {/* Mouth */}
           <path
             d="M35 20 Q40 24 45 20"
-            stroke="#080810"
+            stroke="#F5EFFF"
             strokeWidth="1.5"
             strokeLinecap="round"
           />
           {/* Arms */}
           <line ref={armLRef} x1="25" y1="38" x2="14" y2="52"
-            stroke="#E14594" strokeWidth="4" strokeLinecap="round" />
+            stroke="#7A1828" strokeWidth="4" strokeLinecap="round" />
           <line ref={armRRef} x1="55" y1="38" x2="66" y2="52"
-            stroke="#E14594" strokeWidth="4" strokeLinecap="round" />
+            stroke="#7A1828" strokeWidth="4" strokeLinecap="round" />
           {/* Legs */}
           <line ref={legLRef} x1="34" y1="56" x2="26" y2="76"
-            stroke="#7045AF" strokeWidth="5" strokeLinecap="round" />
-          <ellipse ref={footLRef} cx="23" cy="79" rx="8" ry="4" fill="#7045AF" />
+            stroke="#B02A3A" strokeWidth="5" strokeLinecap="round" />
+          <ellipse ref={footLRef} cx="23" cy="79" rx="8" ry="4" fill="#B02A3A" />
           <line ref={legRRef} x1="46" y1="56" x2="54" y2="76"
-            stroke="#7045AF" strokeWidth="5" strokeLinecap="round" />
-          <ellipse ref={footRRef} cx="57" cy="79" rx="8" ry="4" fill="#7045AF" />
+            stroke="#B02A3A" strokeWidth="5" strokeLinecap="round" />
+          <ellipse ref={footRRef} cx="57" cy="79" rx="8" ry="4" fill="#B02A3A" />
         </svg>
 
         {/* Ground shadow */}
@@ -132,7 +132,7 @@ export default function Loader() {
             height: 8,
             margin: "4px auto 0",
             background:
-              "radial-gradient(ellipse, rgba(112,69,175,0.4) 0%, transparent 70%)",
+              "radial-gradient(ellipse, rgba(176,42,58,0.3) 0%, transparent 70%)",
             animation: "bob 0.4s ease-in-out infinite alternate",
           }}
         />
@@ -143,7 +143,7 @@ export default function Loader() {
         style={{
           width: 220,
           height: 2,
-          background: "rgba(246,231,188,0.1)",
+          background: "rgba(26,26,46,0.1)",
           borderRadius: 2,
           overflow: "hidden",
           marginBottom: 16,

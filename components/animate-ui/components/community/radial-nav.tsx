@@ -70,10 +70,10 @@ export function RadialNav({ items, defaultActiveId }: RadialNavProps) {
                   borderRadius: "50%",
                   background: isActive
                     ? "linear-gradient(135deg, var(--primary), var(--cta))"
-                    : "rgba(13,13,26,0.9)",
+                    : "rgba(237,228,250,0.95)",
                   border: isActive
                     ? "none"
-                    : "1px solid rgba(10,196,224,0.25)",
+                    : "1px solid rgba(59,42,94,0.25)",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
@@ -106,6 +106,7 @@ export function RadialNav({ items, defaultActiveId }: RadialNavProps) {
 
       {/* Toggle button */}
       <motion.button
+        suppressHydrationWarning
         onClick={() => setOpen((v) => !v)}
         whileTap={{ scale: 0.92 }}
         style={{
@@ -114,8 +115,8 @@ export function RadialNav({ items, defaultActiveId }: RadialNavProps) {
           borderRadius: "50%",
           background: open
             ? "linear-gradient(135deg, var(--primary), var(--cta))"
-            : "rgba(13,13,26,0.9)",
-          border: "1px solid rgba(10,196,224,0.3)",
+            : "rgba(237,228,250,0.95)",
+          border: "1px solid rgba(59,42,94,0.3)",
           backdropFilter: "blur(16px)",
           display: "flex",
           alignItems: "center",

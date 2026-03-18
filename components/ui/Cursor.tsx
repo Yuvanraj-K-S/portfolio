@@ -58,7 +58,7 @@ export default function Cursor() {
     });
 
     // Sparks
-    const palette = ["#7045AF", "#0AC4E0", "#E14594", "#F6E7BC"];
+    const palette = ["#B02A3A", "#3B2A5E", "#7A1828", "#1A1A2E"];
     let sparks: {
       x: number; y: number;
       vx: number; vy: number;
@@ -89,7 +89,7 @@ export default function Cursor() {
         s.vy += 0.15;
         s.life -= 0.04;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, 3 * s.life, 0, Math.PI * 2);
+        ctx.arc(s.x, s.y, Math.max(0, 3 * s.life), 0, Math.PI * 2);
         const alpha = Math.floor(s.life * 255).toString(16).padStart(2, "0");
         ctx.fillStyle = s.color + alpha;
         ctx.fill();
@@ -149,7 +149,7 @@ export default function Cursor() {
           top: 0, left: 0,
           width: 28, height: 28,
           borderRadius: "50%",
-          border: "1.5px solid rgba(10,196,224,0.5)",
+          border: "1.5px solid rgba(59,42,94,0.5)",
           pointerEvents: "none",
           zIndex: 9998,
           transform: "translate(-50%, -50%)",

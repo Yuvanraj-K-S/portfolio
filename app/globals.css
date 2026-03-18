@@ -3,14 +3,16 @@
 @import "tailwindcss";
 
 
+/* REPLACE :root block */
 :root {
-  --bg: #080810;
-  --surface: #0D0D1A;
-  --primary: #7045AF;
-  --secondary: #0AC4E0;
-  --cta: #E14594;
-  --body: #F6E7BC;
-  --muted: rgba(246, 231, 188, 0.45);
+  --bg: #F5EFFF;
+  --surface: #EDE4FA;
+  --surface-raised: #E0D5F2;
+  --primary: #B02A3A;
+  --secondary: #3B2A5E;
+  --cta: #7A1828;
+  --body: #1A1A2E;
+  --muted: rgba(26, 26, 46, 0.50);
 
   --font-display: "Honk", cursive;
   --font-ui: "Monofett", monospace;
@@ -44,12 +46,20 @@ body {
 ::-webkit-scrollbar {
   width: 4px;
 }
+/* UPDATE scrollbar */
 ::-webkit-scrollbar-track {
-  background: var(--bg);
+  background: var(--bg);           /* already uses var, fine */
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--primary);
-  border-radius: 2px;
+  background: var(--primary);      /* already uses var, fine */
+}
+
+/* UPDATE holo-shift keyframes */
+@keyframes holo-shift {
+  0%   { text-shadow: 0 0 40px rgba(176,42,58,0.7),  0 0 80px rgba(59,42,94,0.3); }
+  33%  { text-shadow: 0 0 40px rgba(59,42,94,0.7),   0 0 80px rgba(122,24,40,0.4); }
+  66%  { text-shadow: 0 0 40px rgba(122,24,40,0.7),  0 0 80px rgba(176,42,58,0.4); }
+  100% { text-shadow: 0 0 40px rgba(176,42,58,0.7),  0 0 80px rgba(59,42,94,0.3); }
 }
 
 /* Section entry animation */
@@ -79,10 +89,10 @@ body {
 
 /* Holographic name glow */
 @keyframes holo-shift {
-  0%   { text-shadow: 0 0 40px rgba(112,69,175,0.7), 0 0 80px rgba(10,196,224,0.3); }
-  33%  { text-shadow: 0 0 40px rgba(10,196,224,0.7), 0 0 80px rgba(225,69,148,0.4); }
-  66%  { text-shadow: 0 0 40px rgba(225,69,148,0.7), 0 0 80px rgba(112,69,175,0.4); }
-  100% { text-shadow: 0 0 40px rgba(112,69,175,0.7), 0 0 80px rgba(10,196,224,0.3); }
+  0%   { text-shadow: 0 0 40px rgba(245,119,153,0.7), 0 0 80px rgba(253,195,161,0.3); }
+  33%  { text-shadow: 0 0 40px rgba(253,195,161,0.7), 0 0 80px rgba(251,155,143,0.4); }
+  66%  { text-shadow: 0 0 40px rgba(251,155,143,0.7), 0 0 80px rgba(245,119,153,0.4); }
+  100% { text-shadow: 0 0 40px rgba(245,119,153,0.7), 0 0 80px rgba(253,195,161,0.3); }
 }
 .holo-text {
   animation: holo-shift 4s ease-in-out infinite;

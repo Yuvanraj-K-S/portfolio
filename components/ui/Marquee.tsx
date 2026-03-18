@@ -15,9 +15,9 @@ export default function Marquee() {
         width: "100%",
         overflow: "hidden",
         padding: "14px 0",
-        borderTop: "1px solid rgba(246,231,188,0.06)",
-        borderBottom: "1px solid rgba(246,231,188,0.06)",
-        background: "rgba(13,13,26,0.4)",
+        borderTop:    "1px solid rgba(26,26,46,0.10)",
+        borderBottom: "1px solid rgba(26,26,46,0.10)",
+        background: "rgba(224,213,242,0.5)",
       }}
     >
       <div
