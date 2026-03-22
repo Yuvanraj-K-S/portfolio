@@ -1,322 +1,68 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { motion, useInView, AnimatePresence } from "framer-motion";
 import { certifications } from "@/lib/data";
-
-function CertModal({
-  cert,
-  onClose,
-}: {
-  cert: typeof certifications[0];
-  onClose: () => void;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(8,8,16,0.85)",
-        backdropFilter: "blur(8px)",
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 24,
-      }}
-    >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1,   opacity: 1 }}
-        exit={{ scale: 0.8,    opacity: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 24 }}
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "var(--surface)",
-          border: "1px solid rgba(10,196,224,0.2)",
-          borderRadius: 20,
-          padding: 40,
-          maxWidth: 480,
-          width: "100%",
-          position: "relative",
-        }}
-      >
-        {/* Close */}
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: 16,
-            right: 16,
-            background: "none",
-            border: "none",
-            color: "var(--muted)",
-            padding: 8,
-            borderRadius: 8,
-            transition: "color 0.2s",
-          }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.color = "var(--cta)")
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.color = "var(--muted)")
-          }
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6"  y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-
-        {/* Badge icon */}
-        <div
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: 16,
-            background: "linear-gradient(135deg, var(--primary), var(--cta))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 24,
-          }}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
-            stroke="var(--body)" strokeWidth="1.5" strokeLinecap="round">
-            <circle cx="12" cy="8" r="6"/>
-            <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
-          </svg>
-        </div>
-
-        <h3
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 28,
-            color: "var(--body)",
-            marginBottom: 8,
-            lineHeight: 1.1,
-          }}
-        >
-          {cert.name}
-        </h3>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginBottom: 24,
-          }}
-        >
-          <span style={{
-            fontFamily: "var(--font-body)",
-            fontSize: 14,
-            color: "var(--secondary)",
-          }}>
-            {cert.issuer}
-          </span>
-          <span style={{ color: "var(--muted)" }}>·</span>
-          <span style={{
-            fontFamily: "var(--font-ui)",
-            fontSize: 11,
-            color: "var(--muted)",
-            letterSpacing: "0.08em",
-          }}>
-            {cert.year}
-          </span>
-        </div>
-
-        {/* Certificate preview area */}
-        <div
-          style={{
-            width: "100%",
-            height: 180,
-            borderRadius: 12,
-            background: "rgba(112,69,175,0.06)",
-            border: "1px dashed rgba(112,69,175,0.2)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            color: "var(--muted)",
-          }}
-        >
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
-          </svg>
-          <span style={{
-            fontFamily: "var(--font-ui)",
-            fontSize: 10,
-            letterSpacing: "0.08em",
-          }}>
-            CERTIFICATE PREVIEW
-          </span>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
+import { useStaggerReveal } from "@/lib/useReveal";
 
 export default function Certifications() {
-  const ref     = useRef(null);
-  const inView  = useInView(ref, { once: true, margin: "-100px" });
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [selected, setSelected] = useState<typeof certifications[0] | null>(null);
+  const sectionRef = useStaggerReveal(".cert-item", 0.1);
 
   return (
     <section
-      ref={ref}
-      style={{
-        minHeight: "100vh",
-        padding: "80px 40px",
-        background: "var(--surface)",
-      }}
+      id="certifications"
+      ref={sectionRef as React.RefObject<HTMLElement>}
+      style={{ padding: "var(--section-pad) clamp(24px, 8vw, 120px)" }}
     >
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          style={{ marginBottom: 56 }}
-        >
-          <p style={{
-            fontFamily: "var(--font-ui)", fontSize: 11,
-            color: "var(--secondary)", letterSpacing: "0.2em",
-            textTransform: "uppercase", marginBottom: 8,
-          }}>
-            06 — Credentials
-          </p>
-          <h2 style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(40px, 6vw, 64px)",
-            color: "var(--body)", lineHeight: 1,
-          }}>
-            CERTIFICATIONS
-          </h2>
-        </motion.div>
-
-        {/* Cards grid */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-            gap: 20,
-          }}
-        >
-          {certifications.map((cert, i) => {
-            const isHovered = hovered === cert.id;
-            const isBlurred = hovered !== null && !isHovered;
-
-            return (
-              <motion.div
-                key={cert.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={inView ? { opacity: 1, y: 0 } : {}}
-                transition={{ duration: 0.5, delay: i * 0.08 }}
-                onMouseEnter={() => setHovered(cert.id)}
-                onMouseLeave={() => setHovered(null)}
-                onClick={() => setSelected(cert)}
-                style={{
-                  background: "var(--bg)",
-                  border: `1px solid ${isHovered
-                    ? "rgba(10,196,224,0.35)"
-                    : "rgba(246,231,188,0.06)"}`,
-                  borderRadius: 16,
-                  padding: 24,
-                  cursor: "pointer",
-                  transform: isHovered
-                    ? "scale(1.06)"
-                    : isBlurred
-                    ? "scale(0.94)"
-                    : "scale(1)",
-                  filter: isBlurred ? "blur(2px)" : "none",
-                  opacity: isBlurred ? 0.5 : 1,
-                  transition: "all 0.3s ease",
-                }}
-              >
-                {/* Badge */}
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 12,
-                    background: isHovered
-                      ? "linear-gradient(135deg, var(--primary), var(--cta))"
-                      : "rgba(112,69,175,0.15)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 16,
-                    transition: "background 0.3s",
-                  }}
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                    stroke={isHovered ? "var(--body)" : "var(--primary)"}
-                    strokeWidth="1.5" strokeLinecap="round"
-                    style={{ transition: "stroke 0.3s" }}
-                  >
-                    <circle cx="12" cy="8" r="6"/>
-                    <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
-                  </svg>
-                </div>
-
-                {/* Name */}
-                <h3
-                  style={{
-                    fontFamily: "var(--font-body)",
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: "var(--body)",
-                    lineHeight: 1.4,
-                    marginBottom: 8,
-                  }}
-                >
-                  {cert.name}
-                </h3>
-
-                {/* Issuer + year */}
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: 10,
-                    color: "var(--secondary)",
-                    letterSpacing: "0.06em",
-                  }}>
-                    {cert.issuer.toUpperCase()}
-                  </span>
-                  <span style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: 10,
-                    color: "var(--muted)",
-                  }}>
-                    {cert.year}
-                  </span>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 16, marginBottom: 64,
+      }}>
+        <span style={{
+          fontFamily: "var(--font-ui)", fontSize: 10,
+          letterSpacing: "0.2em", color: "var(--text-muted)",
+        }}>
+          05 — CERTIFICATIONS
+        </span>
+        <div className="rule" style={{ flex: 1, background: "var(--border)" }} />
       </div>
 
-      {/* Modal */}
-      <AnimatePresence>
-        {selected && (
-          <CertModal cert={selected} onClose={() => setSelected(null)} />
-        )}
-      </AnimatePresence>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+        gap: "1px",
+        background: "var(--border)",
+        border: "1px solid var(--border)",
+      }}>
+        {certifications.map((cert) => (
+          <div
+            key={cert.id}
+            className="cert-item reveal"
+            style={{
+              background: "var(--bg)",
+              padding: "clamp(24px, 3vw, 36px)",
+              transition: "background 0.3s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg)")}
+          >
+            <div style={{
+              fontFamily: "var(--font-ui)",
+              fontSize: 9, letterSpacing: "0.18em",
+              color: "var(--text-muted)",
+              marginBottom: 12,
+            }}>
+              {cert.issuer.toUpperCase()} — {cert.year}
+            </div>
+            <div style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "clamp(13px, 1.3vw, 15px)",
+              fontWeight: 400,
+              lineHeight: 1.5,
+              color: "var(--text-secondary)",
+            }}>
+              {cert.name}
+            </div>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

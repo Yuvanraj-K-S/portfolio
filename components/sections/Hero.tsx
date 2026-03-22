@@ -1,307 +1,300 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState, Suspense } from "react";
-import { motion } from "framer-motion";
-import { Canvas, useFrame } from "@react-three/fiber";
-import * as THREE from "three";
-import { siteConfig } from "@/lib/data";
+import { useEffect, useRef } from 'react';
+import { useHeroData } from '../../lib/hooks/useFirestore';
 
-/* ─────────────────────────────────────────────
-   Dino 3D billboard
-   Uses THREE.TextureLoader directly — avoids
-   useTexture/drei issues with Turbopack
-───────────────────────────────────────────── */
-function Dino3D() {
-  const meshRef   = useRef<THREE.Mesh>(null);
-  const mouse     = useRef({ x: 0, y: 0 });
-  const [hovered, setHovered]   = useState(false);
-  const [texture,  setTexture]  = useState<THREE.Texture | null>(null);
+class BreathingPolygon {
+  private ctx: CanvasRenderingContext2D;
+  private vertices: { x: number; y: number; amplitude: number; phase: number; frequency: number }[] = [];
+  private animationId: number | null = null;
+  private mousePos = { x: 0, y: 0 };
+  private time = 0;
 
-  // Load texture manually — no useTexture
-  useEffect(() => {
-    const loader = new THREE.TextureLoader();
-    loader.load(
-      "../../public/dino.png",
-      (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        setTexture(tex);
-      },
-      undefined,
-      (err) => console.error("Dino texture failed:", err)
-    );
-  }, []);
+  constructor(private canvas: HTMLCanvasElement) {
+    this.ctx = canvas.getContext('2d')!;
+    this.initVertices();
+  }
 
-  // Mouse tracking
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      mouse.current.x =  e.clientX / window.innerWidth  - 0.5;
-      mouse.current.y =  e.clientY / window.innerHeight - 0.5;
-    };
-    window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
-  }, []);
+  private initVertices() {
+    const centerX = this.canvas.width / 2;
+    const centerY = this.canvas.height / 2;
+    const radius = Math.min(centerX, centerY) * 0.6;
 
-  useFrame(() => {
-    const m = meshRef.current;
-    if (!m) return;
-
-    // Smooth cursor tilt
-    m.rotation.y = THREE.MathUtils.lerp(m.rotation.y,  mouse.current.x * 0.45, 0.05);
-    m.rotation.x = THREE.MathUtils.lerp(m.rotation.x, -mouse.current.y * 0.28, 0.05);
-
-    // Idle float
-    m.position.y = Math.sin(Date.now() * 0.0018) * 0.12;
-
-    // Hover wave
-    if (hovered) {
-      m.rotation.z = Math.sin(Date.now() * 0.009) * 0.12;
-    } else {
-      m.rotation.z = THREE.MathUtils.lerp(m.rotation.z, 0, 0.08);
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      this.vertices.push({
+        x: centerX + Math.cos(angle) * radius,
+        y: centerY + Math.sin(angle) * radius,
+        amplitude: 20 + Math.random() * 15,
+        phase: Math.random() * Math.PI * 2,
+        frequency: 0.5 + Math.random() * 0.5
+      });
     }
-  });
+  }
 
-  // Don't render mesh until texture is ready
-  if (!texture) return null;
+  public updateMouse(x: number, y: number) {
+    this.mousePos = { x, y };
+  }
 
-  return (
-    <mesh
-      ref={meshRef}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={()  => setHovered(false)}
-    >
-      <planeGeometry args={[3.2, 3.2]} />
-      <meshStandardMaterial
-        map={texture}
-        transparent
-        alphaTest={0.05}
-        side={THREE.FrontSide}
-      />
-    </mesh>
-  );
-}
+  public animate = () => {
+    this.time += 0.01;
+    
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Draw polygon
+    this.ctx.beginPath();
+    this.ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--polygon-color');
+    this.ctx.lineWidth = 2;
+    
+    for (let i = 0; i < this.vertices.length; i++) {
+      const vertex = this.vertices[i];
+      const nextVertex = this.vertices[(i + 1) % this.vertices.length];
+      
+      // Calculate breathing offset
+      const breathingOffset = Math.sin(this.time * vertex.frequency + vertex.phase) * vertex.amplitude;
+      
+      // Calculate mouse repulsion
+      const dx = this.mousePos.x - vertex.x;
+      const dy = this.mousePos.y - vertex.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const maxDistance = 200;
+      const repulsionStrength = Math.max(0, 1 - distance / maxDistance);
+      
+      const repulsionX = (dx / distance) * repulsionStrength * 30;
+      const repulsionY = (dy / distance) * repulsionStrength * 30;
+      
+      const x = vertex.x + breathingOffset + repulsionX;
+      const y = vertex.y + repulsionY;
+      
+      if (i === 0) {
+        this.ctx.moveTo(x, y);
+      } else {
+        this.ctx.lineTo(x, y);
+      }
+    }
+    
+    this.ctx.closePath();
+    this.ctx.stroke();
+  };
 
-function DinoCanvas() {
-  return (
-    <Canvas
-      camera={{ position: [0, 0, 5], fov: 50 }}
-      style={{ background: "transparent" }}
-      gl={{ alpha: true, antialias: true }}
-    >
-      <ambientLight intensity={1.2} />
-      <directionalLight position={[2, 3, 5]} intensity={0.8} />
-      <Suspense fallback={null}>
-        <Dino3D />
-      </Suspense>
-    </Canvas>
-  );
-}
-
-/* ─────────────────────────────────────────────
-   Hero Section
-───────────────────────────────────────────── */
-export default function Hero() {
-  const nameRef = useRef<HTMLHeadingElement>(null);
-  const heroRef = useRef<HTMLElement>(null);
-
-  // Name parallax
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!nameRef.current) return;
-      const dx = (e.clientX / window.innerWidth  - 0.5) * 14;
-      const dy = (e.clientY / window.innerHeight - 0.5) *  7;
-      nameRef.current.style.transform =
-        `perspective(600px) rotateY(${dx}deg) rotateX(${-dy}deg)`;
+  public start = () => {
+    const loop = () => {
+      this.animate();
+      this.animationId = requestAnimationFrame(loop);
     };
-    window.addEventListener("mousemove", onMove);
-    return () => window.removeEventListener("mousemove", onMove);
+    this.animationId = requestAnimationFrame(loop);
+  };
+
+  public stop = () => {
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+  };
+
+  public resize = () => {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+    this.vertices = [];
+    this.initVertices();
+  };
+}
+
+export default function Hero() {
+  const { data: heroData, loading } = useHeroData();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const polygonRef = useRef<BreathingPolygon | null>(null);
+  const scrollHintRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!canvasRef.current || loading) return;
+
+    const canvas = canvasRef.current;
+    const polygon = new BreathingPolygon(canvas);
+    polygonRef.current = polygon;
+
+    // Start animation
+    polygon.start();
+
+    // Handle mouse movement
+    const handleMouseMove = (e: MouseEvent) => {
+      polygon.updateMouse(e.clientX, e.clientY);
+    };
+
+    // Handle resize
+    const handleResize = () => {
+      polygon.resize();
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', handleResize);
+      polygon.stop();
+    };
+  }, [loading]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (scrollHintRef.current) {
+        const scrollY = window.scrollY;
+        const opacity = scrollY > 100 ? 0 : 1;
+        scrollHintRef.current.style.opacity = opacity.toString();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const scrollTo = (id: string) =>
-    document.querySelector(id)?.scrollIntoView({ behavior: "smooth" });
+  if (loading) {
+    return null; // Show nothing while loading
+  }
+
+  if (!heroData) {
+    return null;
+  }
 
   return (
-    <section
-      ref={heroRef}
-      style={{
-        position: "relative",
-        width: "100%",
-        height: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "hidden",
-        background: "var(--bg)",
-      }}
-    >
-      {/* Subtle radial glow */}
+    <section style={{
+      position: 'relative',
+      width: '100vw',
+      height: '100vh',
+      overflow: 'hidden'
+    }}>
+      {/* Canvas Background */}
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0
+        }}
+      />
+
+      {/* Text Content */}
       <div style={{
-        position: "absolute",
+        position: 'absolute',
         inset: 0,
-        background: "radial-gradient(ellipse 65% 55% at 50% 50%, rgba(176,42,58,0.06) 0%, transparent 70%)",
-        pointerEvents: "none",
-        zIndex: 0,
-      }} />
-
-      {/* ── LAYOUT: text left, dino right ── */}
-      <div style={{
-        position: "relative",
-        zIndex: 2,
-        width: "100%",
-        maxWidth: 1200,
-        padding: "0 48px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 32,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1
       }}>
+        {/* Role Label */}
+        <div style={{
+          fontFamily: 'var(--font-ui)',
+          fontSize: '14px',
+          color: 'var(--text-muted)',
+          opacity: 0,
+          animation: 'fadeIn 0.5s ease-out 0ms forwards'
+        }}>
+          {heroData.role}
+        </div>
 
-        {/* LEFT: text */}
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}
-        >
-          {/* Role — DM Sans */}
-          <p style={{
-            fontFamily: "var(--font-body)",
-            fontSize: 13,
-            color: "var(--secondary)",
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-            fontWeight: 500,
-          }}>
-            {siteConfig.role}
-          </p>
+        {/* Name */}
+        <div style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 'clamp(52px, 11vw, 140px)',
+          color: 'var(--text-primary)',
+          fontVariationSettings: "'MORF' 15, 'SHLN' 50",
+          opacity: 0,
+          transform: 'translateY(20px)',
+          animation: 'fadeInSlideUp 0.8s ease-out 200ms forwards'
+        }}>
+          {heroData.name}
+        </div>
 
-          {/* Name — Honk */}
-          <h1
-            ref={nameRef}
-            className="holo-text"
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(52px, 9vw, 120px)",
-              lineHeight: 0.92,
-              color: "var(--body)",
-              userSelect: "none",
-              transition: "transform 0.1s ease",
-              fontVariationSettings: "'MORF' 15, 'SHLN' 50",
-            }}
-          >
-            {siteConfig.name.split(" ")[0].toUpperCase()}
-          </h1>
-
-          {/* Punchline — Monofett */}
-          <p style={{
-            fontFamily: "var(--font-ui)",
-            fontSize: "clamp(11px, 1.4vw, 15px)",
-            color: "var(--muted)",
-            letterSpacing: "0.05em",
-            marginTop: 8,
-            maxWidth: 420,
-            lineHeight: 1.6,
-          }}>
-            {siteConfig.punchline}
-          </p>
-
-          {/* CTAs — Monofett */}
-          <div style={{ display: "flex", gap: 14, marginTop: 28, flexWrap: "wrap" }}>
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => scrollTo("#projects")}
-              style={{
-                fontFamily: "var(--font-ui)",
-                fontSize: 12,
-                letterSpacing: "0.1em",
-                padding: "13px 34px",
-                borderRadius: 100,
-                border: "none",
-                background: "linear-gradient(135deg, var(--primary), var(--cta))",
-                color: "#F5EFFF",
-                cursor: "none",
-              }}
-            >
-              VIEW WORK
-            </motion.button>
-
-            <motion.button
-              whileHover={{ scale: 1.04 }}
-              whileTap={{ scale: 0.96 }}
-              onClick={() => scrollTo("#contact")}
-              style={{
-                fontFamily: "var(--font-ui)",
-                fontSize: 12,
-                letterSpacing: "0.1em",
-                padding: "13px 34px",
-                borderRadius: 100,
-                background: "transparent",
-                border: "1.5px solid rgba(59,42,94,0.35)",
-                color: "var(--secondary)",
-                cursor: "none",
-              }}
-            >
-              CONTACT ME
-            </motion.button>
-          </div>
-        </motion.div>
-
-        {/* RIGHT: Dino canvas */}
-        <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          style={{
-            width: "min(420px, 42vw)",
-            height: "min(420px, 42vw)",
-            flexShrink: 0,
-          }}
-        >
-          <DinoCanvas />
-        </motion.div>
+        {/* Punchline */}
+        <div style={{
+          fontFamily: 'var(--font-body)',
+          fontSize: '18px',
+          fontWeight: '300',
+          fontStyle: 'italic',
+          color: 'var(--text-secondary)',
+          opacity: 0,
+          transform: 'translateY(20px)',
+          animation: 'fadeInSlideUp 0.8s ease-out 500ms forwards'
+        }}>
+          {heroData.punchline}
+        </div>
       </div>
 
-      {/* Scroll indicator */}
-      <div style={{
-        position: "absolute",
-        bottom: 36,
-        left: "50%",
-        transform: "translateX(-50%)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 6,
-        zIndex: 2,
-      }}>
+      {/* Scroll Hint */}
+      <div
+        ref={scrollHintRef}
+        style={{
+          position: 'absolute',
+          bottom: '40px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 2,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px'
+        }}
+      >
         <div style={{
-          width: 22,
-          height: 34,
-          border: "1.5px solid rgba(26,26,46,0.2)",
-          borderRadius: 12,
-          position: "relative",
-          overflow: "hidden",
-        }}>
-          <div style={{
-            width: 3,
-            height: 6,
-            background: "var(--primary)",
-            borderRadius: 2,
-            position: "absolute",
-            top: 6,
-            left: "50%",
-            transform: "translateX(-50%)",
-            animation: "scroll-down 2s ease infinite",
-          }} />
-        </div>
-        <span style={{
-          fontFamily: "var(--font-ui)",
-          fontSize: 10,
-          color: "var(--muted)",
-          letterSpacing: "0.12em",
+          fontFamily: 'var(--font-ui)',
+          fontSize: '9px',
+          color: 'var(--text-muted)',
+          textAlign: 'center'
         }}>
           SCROLL
-        </span>
+        </div>
+        
+        {/* Animated Scroll Line */}
+        <div style={{
+          width: '2px',
+          height: '20px',
+          background: 'var(--text-muted)',
+          transform: 'scaleY(0)',
+          transformOrigin: 'top',
+          animation: 'scrollLine 1.8s ease-in-out infinite'
+        }} />
       </div>
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes fadeInSlideUp {
+          from { 
+            opacity: 0; 
+            transform: translateY(20px); 
+          }
+          to { 
+            opacity: 1; 
+            transform: translateY(0); 
+          }
+        }
+        
+        @keyframes scrollLine {
+          0%, 100% { 
+            transform: scaleY(0); 
+            transform-origin: top; 
+          }
+          49% { 
+            transform: scaleY(1); 
+            transform-origin: top; 
+          }
+          50% { 
+            transform: scaleY(1); 
+            transform-origin: bottom; 
+          }
+          100% { 
+            transform: scaleY(0); 
+            transform-origin: bottom; 
+          }
+        }
+      `}</style>
     </section>
   );
 }

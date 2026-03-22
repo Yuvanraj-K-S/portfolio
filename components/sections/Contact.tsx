@@ -1,458 +1,571 @@
-"use client";
+'use client';
 
-import { useRef, useState } from "react";
-import { motion, useInView, AnimatePresence } from "framer-motion";
-import { siteConfig } from "@/lib/data";
+import { useState, useEffect, useRef } from 'react';
+import { useContactInfo } from '../../lib/hooks/useFirestore';
+import { ContactInfo } from '../../lib/types';
 
-type FormState = "idle" | "sending" | "success" | "error";
+interface ContactCardProps {
+  icon: JSX.Element;
+  label: string;
+  color: string;
+  onClick?: () => void;
+  delay: number;
+  isExpanded: boolean;
+  position: {
+    top?: string;
+    left?: string;
+    right?: string;
+    bottom?: string;
+    transform: string;
+  };
+}
 
-export default function Contact() {
-  const ref    = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
+function ContactCard({ icon, label, color, onClick, delay, isExpanded, position }: ContactCardProps) {
+  const [copied, setCopied] = useState(false);
 
-  const [form, setForm]   = useState({ name: "", email: "", message: "" });
-  const [state, setState] = useState<FormState>("idle");
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
-
-  const handleSubmit = async () => {
-    if (!form.name || !form.email || !form.message) return;
-    setState("sending");
-
-    // EmailJS — swap in your real service/template/public key
-    try {
-      const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          service_id:  "YOUR_SERVICE_ID",
-          template_id: "YOUR_TEMPLATE_ID",
-          user_id:     "YOUR_PUBLIC_KEY",
-          template_params: {
-            from_name:    form.name,
-            from_email:   form.email,
-            message:      form.message,
-            to_name:      "Yuvanraj",
-          },
-        }),
-      });
-      if (res.ok) setState("success");
-      else setState("error");
-    } catch {
-      setState("error");
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+      if (label.includes('Phone')) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }
     }
   };
 
-  const socialLinks = [
-    {
-      label: "GitHub",
-      href: siteConfig.github,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.56 3.285-1.23 3.285-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
-        </svg>
-      ),
-    },
-    {
-      label: "LinkedIn",
-      href: siteConfig.linkedin,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-        </svg>
-      ),
-    },
-    {
-      label: "Email",
-      href: `mailto:${siteConfig.email}`,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-          <polyline points="22,6 12,13 2,6"/>
-        </svg>
-      ),
-    },
-    {
-      label: "Codolio",
-      href: siteConfig.codolio,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-          <rect x="3" y="3" width="18" height="18" rx="4"/>
-          <path d="M9 9l6 6M15 9l-6 6"/>
-        </svg>
-      ),
-    },
-  ];
+  const cardStyle = {
+    position: 'absolute' as const,
+    width: '100px',
+    height: '60px',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.4s ease-in-out',
+    opacity: isExpanded ? 1 : 0,
+    transitionDelay: `${delay}ms`,
+    ...position
+  };
 
-  const inputStyle = {
-    width: "100%",
-    background: "var(--surface)",
-    border: "1px solid rgba(246,231,188,0.08)",
-    borderRadius: 12,
-    padding: "14px 18px",
-    fontFamily: "var(--font-body)",
-    fontSize: 14,
-    color: "var(--body)",
-    outline: "none",
-    transition: "border-color 0.2s",
-  } as React.CSSProperties;
+  const cardStyleWithTransform = {
+    ...cardStyle,
+    transform: isExpanded ? 'scale(1)' : 'scale(0.8)'
+  };
+
+  const cardHoverStyle = {
+    ...cardStyle,
+    background: color,
+    borderColor: color
+  };
 
   return (
-    <section
-      ref={ref}
-      style={{
-        minHeight: "100vh",
-        padding: "80px 40px",
-        background: "var(--surface)",
+    <div
+      style={cardStyleWithTransform}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = color;
+        e.currentTarget.style.borderColor = color;
       }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'var(--surface)';
+        e.currentTarget.style.borderColor = 'var(--border)';
+      }}
+      onClick={handleClick}
     >
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 80,
-          alignItems: "center",
-        }}
-        className="contact-grid"
+      <div style={{ marginBottom: '4px' }}>
+        {icon}
+      </div>
+      <div style={{
+        fontFamily: 'var(--font-ui)',
+        fontSize: '10px',
+        color: isExpanded ? 'white' : 'var(--text-secondary)',
+        textAlign: 'center'
+      }}>
+        {copied ? 'COPIED!' : label}
+      </div>
+    </div>
+  );
+}
+
+interface EmailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  email: string;
+}
+
+function EmailModal({ isOpen, onClose, email }: EmailModalProps) {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('sending');
+    
+    try {
+      const emailjs = await import('@emailjs/browser');
+      await emailjs.send(
+        process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID ?? '',
+        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID ?? '',
+        {
+          from_name: formData.name,
+          from_email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+          to_email: email
+        },
+        process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY ?? ''
+      );
+      
+      setStatus('sent');
+      setTimeout(() => {
+        onClose();
+        setFormData({ name: '', email: '', subject: '', message: '' });
+        setStatus('idle');
+      },2000);
+    } catch (error) {
+      setStatus('error');
+    }
+  };
+
+  const modalStyle = {
+    position: 'fixed' as const,
+    top: 0,
+    left: 0,
+    width: '100vw',
+    height: '100vh',
+    background: 'rgba(0, 0, 0, 0.8)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    opacity: isOpen ? 1 : 0,
+    pointerEvents: isOpen ? 'auto' : 'none',
+    transition: 'opacity 0.3s ease'
+  };
+
+  const modalContentStyle = {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    padding: '32px',
+    width: '400px',
+    maxWidth: '90vw',
+    transform: isOpen ? 'scale(1)' : 'scale(0.9)',
+    transition: 'transform 0.3s ease'
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div style={modalStyle} onClick={onClose}>
+      <div 
+        style={modalContentStyle}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* ── LEFT ── */}
-        <motion.div
-          initial={{ opacity: 0, x: -40 }}
-          animate={inView ? { opacity: 1, x: 0 } : {}}
-          transition={{ duration: 0.7 }}
-        >
-          <p style={{
-            fontFamily: "var(--font-ui)", fontSize: 11,
-            color: "var(--secondary)", letterSpacing: "0.2em",
-            textTransform: "uppercase", marginBottom: 8,
-          }}>
-            08 — Get In Touch
-          </p>
-
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '24px'
+        }}>
           <h2 style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(36px, 5vw, 56px)",
-            color: "var(--body)",
-            lineHeight: 1.05,
-            marginBottom: 24,
+            fontFamily: 'var(--font-display)',
+            fontSize: '24px',
+            color: 'var(--text-primary)'
           }}>
-            LET'S BUILD SOMETHING.
+            Send Message
           </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-secondary)',
+              fontSize: '20px',
+              cursor: 'pointer'
+            }}
+          >
+            ✕
+          </button>
+        </div>
 
-          <p style={{
-            fontFamily: "var(--font-body)",
-            fontSize: 15,
-            color: "var(--muted)",
-            lineHeight: 1.75,
-            marginBottom: 40,
-            maxWidth: 380,
-          }}>
-            Open to internships, full-time roles, and interesting projects.
-            If you have a problem worth solving, let's talk.
-          </p>
-
-          {/* Social links */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {socialLinks.map((link) => (
-              <motion.a
-                key={link.label}
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                whileHover={{ x: 6 }}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 14,
-                  color: "var(--muted)",
-                  textDecoration: "none",
-                  fontFamily: "var(--font-ui)",
-                  fontSize: 12,
-                  letterSpacing: "0.08em",
-                  padding: "12px 16px",
-                  borderRadius: 12,
-                  border: "1px solid rgba(246,231,188,0.06)",
-                  background: "var(--bg)",
-                  transition: "border-color 0.2s, color 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.borderColor = "rgba(10,196,224,0.3)";
-                  el.style.color = "var(--secondary)";
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.borderColor = "rgba(246,231,188,0.06)";
-                  el.style.color = "var(--muted)";
-                }}
-              >
-                {link.icon}
-                {link.label}
-              </motion.a>
-            ))}
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '16px' }}>
+            <input
+              type="text"
+              placeholder="Name"
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              required
+              suppressHydrationWarning
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'var(--surface-high)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-body)',
+                fontSize: '14px'
+              }}
+            />
           </div>
-        </motion.div>
 
-        {/* ── RIGHT — Form ── */}
-        <motion.div
-          initial={{ opacity: 0, x: 40 }}
-          animate={inView ? { opacity: 1, x: 0 } : {}}
-          transition={{ duration: 0.7, delay: 0.15 }}
-        >
-          <AnimatePresence mode="wait">
-            {state === "success" ? (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 16,
-                  minHeight: 360,
-                  textAlign: "center",
-                }}
-              >
-                {/* Animated checkmark */}
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                  style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: "50%",
-                    background: "linear-gradient(135deg, var(--primary), var(--secondary))",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-                    stroke="var(--body)" strokeWidth="2.5" strokeLinecap="round">
-                    <motion.polyline
-                      points="20 6 9 17 4 12"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ duration: 0.5, delay: 0.2 }}
-                    />
-                  </svg>
-                </motion.div>
-                <h3 style={{
-                  fontFamily: "var(--font-display)",
-                  fontSize: 32,
-                  color: "var(--body)",
-                }}>
-                  MESSAGE SENT!
-                </h3>
-                <p style={{
-                  fontFamily: "var(--font-body)",
-                  fontSize: 14,
-                  color: "var(--muted)",
-                }}>
-                  I'll get back to you within 24 hours.
-                </p>
-                <button
-                  onClick={() => {
-                    setForm({ name: "", email: "", message: "" });
-                    setState("idle");
-                  }}
-                  style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: 11,
-                    letterSpacing: "0.08em",
-                    padding: "10px 24px",
-                    borderRadius: 100,
-                    border: "1px solid rgba(246,231,188,0.15)",
-                    background: "none",
-                    color: "var(--muted)",
-                    marginTop: 8,
-                  }}
-                >
-                  SEND ANOTHER
-                </button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="form"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 16,
-                }}
-              >
-                {/* Name */}
-                <input
-                  name="name"
-                  placeholder="Your name"
-                  value={form.name}
-                  onChange={handleChange}
-                  suppressHydrationWarning  
-                  style={inputStyle}
-                  onFocus={(e) =>
-                    ((e.target as HTMLInputElement).style.borderColor =
-                      "rgba(10,196,224,0.4)")
-                  }
-                  onBlur={(e) =>
-                    ((e.target as HTMLInputElement).style.borderColor =
-                      "rgba(246,231,188,0.08)")
-                  }
-                />
+          <div style={{ marginBottom: '16px' }}>
+            <input
+              type="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              required
+              suppressHydrationWarning
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'var(--surface-high)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-body)',
+                fontSize: '14px'
+              }}
+            />
+          </div>
 
-                {/* Email */}
-                <input
-                  name="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={form.email}
-                  onChange={handleChange}
-                  suppressHydrationWarning  
-                  style={inputStyle}
-                  onFocus={(e) =>
-                    ((e.target as HTMLInputElement).style.borderColor =
-                      "rgba(10,196,224,0.4)")
-                  }
-                  onBlur={(e) =>
-                    ((e.target as HTMLInputElement).style.borderColor =
-                      "rgba(246,231,188,0.08)")
-                  }
-                />
+          <div style={{ marginBottom: '16px' }}>
+            <input
+              type="text"
+              placeholder="Subject"
+              value={formData.subject}
+              onChange={(e) => setFormData({...formData, subject: e.target.value})}
+              required
+              suppressHydrationWarning
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'var(--surface-high)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-body)',
+                fontSize: '14px'
+              }}
+            />
+          </div>
 
-                {/* Message */}
-                <textarea
-                  suppressHydrationWarning  
-                  name="message"
-                  placeholder="What do you want to build?"
-                  value={form.message}
-                  onChange={handleChange}
-                  rows={5}
-                  style={{ ...inputStyle, resize: "none" }}
-                  onFocus={(e) =>
-                    ((e.target as HTMLTextAreaElement).style.borderColor =
-                      "rgba(10,196,224,0.4)")
-                  }
-                  onBlur={(e) =>
-                    ((e.target as HTMLTextAreaElement).style.borderColor =
-                      "rgba(246,231,188,0.08)")
-                  }
-                />
+          <div style={{ marginBottom: '24px' }}>
+            <textarea
+              placeholder="Message"
+              value={formData.message}
+              onChange={(e) => setFormData({...formData, message: e.target.value})}
+              required
+              rows={4}
+              suppressHydrationWarning
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: 'var(--surface-high)',
+                border: '1px solid var(--border)',
+                borderRadius: '6px',
+                color: 'var(--text-primary)',
+                fontFamily: 'var(--font-body)',
+                fontSize: '14px',
+                resize: 'vertical'
+              }}
+            />
+          </div>
 
-                {/* Error */}
-                {state === "error" && (
-                  <p style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: 11,
-                    color: "var(--cta)",
-                    letterSpacing: "0.06em",
-                  }}>
-                    Something went wrong. Try emailing directly.
-                  </p>
-                )}
+          <button
+            type="submit"
+            disabled={status === 'sending'}
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: status === 'sent' ? '#0AC4E0' : 'var(--surface-high)',
+              border: '1px solid var(--border)',
+              borderRadius: '6px',
+              color: status === 'sent' ? 'white' : 'var(--text-primary)',
+              fontFamily: 'var(--font-ui)',
+              fontSize: '14px',
+              cursor: status === 'sending' ? 'not-allowed' : 'pointer',
+              opacity: status === 'sending' ? 0.6 : 1
+            }}
+          >
+            {status === 'sending' ? 'Sending...' : status === 'sent' ? 'Sent!' : 'Send'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
 
-                {/* Submit */}
-                <motion.button
-                  suppressHydrationWarning  
-                  onClick={handleSubmit}
-                  disabled={state === "sending"}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97,
-                    boxShadow: "0 0 0 4px rgba(10,196,224,0.2)" }}
-                  style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: 13,
-                    letterSpacing: "0.1em",
-                    padding: "16px 32px",
-                    borderRadius: 100,
-                    border: "none",
-                    background: state === "sending"
-                      ? "rgba(112,69,175,0.4)"
-                      : "linear-gradient(135deg, var(--primary), var(--cta))",
-                    color: "var(--body)",
-                    width: "100%",
-                    transition: "background 0.3s",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                >
-                  {state === "sending" ? (
-                    <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                      <motion.span
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        style={{ display: "inline-block" }}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                          stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                          <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                        </svg>
-                      </motion.span>
-                      SENDING...
-                    </span>
-                  ) : (
-                    "SEND MESSAGE"
-                  )}
-                </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+export default function Contact() {
+  const { data: contactInfo, loading, error } = useContactInfo();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowEmailModal(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px',
+        color: 'var(--text-secondary)',
+        fontFamily: 'var(--font-body)'
+      }}>
+        Loading contact info...
+      </div>
+    );
+  }
+
+  if (error || !contactInfo) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px',
+        color: 'var(--text-muted)',
+        fontFamily: 'var(--font-body)'
+      }}>
+        No contact information available.
+      </div>
+    );
+  }
+
+  // Pulse animation keyframes
+  const pulseKeyframes = `
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(240, 240, 240, 0.1); }
+      50% { box-shadow: 0 0 0 8px rgba(240, 240, 240, 0.05); }
+    }
+  `;
+
+  const widgetStyle = {
+    position: 'relative' as const,
+    width: '120px',
+    height: '120px',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.4s ease-in-out',
+    margin: '0 auto'
+  };
+
+  const expandedWidgetStyle = {
+    ...widgetStyle,
+    width: '300px',
+    height: '300px'
+  };
+
+  const crossLineStyle = {
+    position: 'absolute' as const,
+    background: 'var(--text-primary)',
+    transition: 'all 0.4s ease-in-out'
+  };
+
+  const horizontalLineStyle = {
+    ...crossLineStyle,
+    width: isExpanded ? '100px' : '40px',
+    height: '2px',
+    transform: 'rotate(0deg)'
+  };
+
+  const verticalLineStyle = {
+    ...crossLineStyle,
+    width: '2px',
+    height: isExpanded ? '100px' : '40px',
+    transform: 'rotate(0deg)'
+  };
+
+  const handleEmailClick = () => setShowEmailModal(true);
+  const handleGithubClick = () => window.open(contactInfo.github, '_blank');
+  const handleLinkedInClick = () => window.open(contactInfo.linkedin, '_blank');
+  const handleCodolioClick = () => window.open(contactInfo.codolio, '_blank');
+  const handlePhoneClick = () => {
+    navigator.clipboard.writeText(contactInfo.phone);
+  };
+
+  return (
+    <section style={{
+      padding: 'var(--section-pad)',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      alignItems: 'center'
+    }}>
+      <style>{pulseKeyframes}</style>
+      
+      <h2 style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: '48px',
+        color: 'var(--text-primary)',
+        marginBottom: '48px',
+        textAlign: 'center'
+      }}>
+        Contact
+      </h2>
+
+      {/* Contact Widget */}
+      <div
+        style={isExpanded ? expandedWidgetStyle : widgetStyle}
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => setIsExpanded(false)}
+        onClick={(e) => {
+          if (!isExpanded) {
+            setIsExpanded(true);
+          }
+        }}
+      >
+        {/* Cross/Plus shape */}
+        <div style={horizontalLineStyle} />
+        <div style={verticalLineStyle} />
+
+        {/* Contact text when collapsed */}
+        {!isExpanded && (
+          <div style={{
+            position: 'absolute' as const,
+            fontFamily: 'var(--font-ui)',
+            fontSize: '14px',
+            color: 'var(--text-primary)',
+            animation: 'pulse 2s ease-in-out infinite'
+          }}>
+            CONTACT
+          </div>
+        )}
+
+        {/* Expanded cards */}
+        {isExpanded && (
+          <>
+            {/* Center: Email */}
+            <ContactCard
+              icon={
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                </svg>
+              }
+              label="Email"
+              color="#E14594"
+              onClick={handleEmailClick}
+              delay={100}
+              isExpanded={isExpanded}
+              position={{
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)'
+              }}
+            />
+
+            {/* Top: GitHub */}
+            <ContactCard
+              icon={
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12z"/>
+                </svg>
+              }
+              label="GitHub"
+              color="#333333"
+              onClick={handleGithubClick}
+              delay={200}
+              isExpanded={isExpanded}
+              position={{
+                top: '-80px',
+                left: '50%',
+                transform: 'translateX(-50%)'
+              }}
+            />
+
+            {/* Bottom: LinkedIn */}
+            <ContactCard
+              icon={
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-1.846 1.422-2.015 2.819-2.015v-2.159c1.926.418 3.255 1.862 3.255 1.862 1.422 0 2.543-.9 2.543-2.015v-2.159c1.397 0 2.819.169 2.819 2.015 0 1.825-1.709 1.825-3.037v-5.569h3.554c.319 0 .576-.257.576-.576v-3.192c0-.319-.257-.576-.576-.576z"/>
+                  <path d="M3.997 20.452c-.319 0-.576-.257-.576-.576v-3.192c0-.319.257-.576.576-.576h3.554v-5.569c0-4.874 3.626-8.727 8.199-8.727 4.573 0 8.199 3.853 8.199 8.727v5.569h3.554c.319 0 .576.257.576.576v3.192c0 .319-.257.576-.576.576z"/>
+                </svg>
+              }
+              label="LinkedIn"
+              color="#0077B5"
+              onClick={handleLinkedInClick}
+              delay={300}
+              isExpanded={isExpanded}
+              position={{
+                bottom: '-80px',
+                left: '50%',
+                transform: 'translateX(-50%)'
+              }}
+            />
+
+            {/* Left: Codolio */}
+            <ContactCard
+              icon={
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                </svg>
+              }
+              label="Codolio"
+              color="#7045AF"
+              onClick={handleCodolioClick}
+              delay={400}
+              isExpanded={isExpanded}
+              position={{
+                left: '-80px',
+                top: '50%',
+                transform: 'translateY(-50%)'
+              }}
+            />
+
+            {/* Right: Phone */}
+            <ContactCard
+              icon={
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.46.45l2.27 2.27c.39.39 1.02.39 1.41 0l2.27-2.27c.63-.63.18-1.73-.45-2.12l-2.2-2.2c-.12-.12-.26-.2-.41-.24-.01 0-.02 0-.03 0zm3.85 1.85c-.49-.49-1.28-.49-1.77 0s-.49 1.28 0 1.77c.49.49 1.28.49 1.77 0s.49-1.28 0-1.77z"/>
+                </svg>
+              }
+              label="Phone"
+              color="#0AC4E0"
+              onClick={handlePhoneClick}
+              delay={500}
+              isExpanded={isExpanded}
+              position={{
+                right: '-80px',
+                top: '50%',
+                transform: 'translateY(-50%)'
+              }}
+            />
+          </>
+        )}
       </div>
 
-      {/* Footer */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={inView ? { opacity: 1 } : {}}
-        transition={{ duration: 0.6, delay: 0.8 }}
-        style={{
-          maxWidth: 1100,
-          margin: "80px auto 0",
-          paddingTop: 32,
-          borderTop: "1px solid rgba(246,231,188,0.06)",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 16,
-        }}
-      >
-        <span style={{
-          fontFamily: "var(--font-display)",
-          fontSize: 24,
-          color: "var(--body)",
-          opacity: 0.4,
-        }}>
-          YUVANRAJ K S
-        </span>
-        <span style={{
-          fontFamily: "var(--font-ui)",
-          fontSize: 10,
-          color: "var(--muted)",
-          letterSpacing: "0.08em",
-        }}>
-          BUILT WITH NEXT.JS + THREE.JS + FRAMER MOTION
-        </span>
-      </motion.div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .contact-grid {
-            grid-template-columns: 1fr !important;
-            gap: 48px !important;
-          }
-        }
-      `}</style>
+      {/* Email Modal */}
+      <EmailModal
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        email={contactInfo.email}
+      />
     </section>
   );
 }

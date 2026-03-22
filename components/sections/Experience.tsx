@@ -1,269 +1,286 @@
-"use client";
+'use client';
 
-import { useRef, useState } from "react";
-import { motion, useInView, AnimatePresence } from "framer-motion";
-import { experience } from "@/lib/data";
+import { useState, useEffect, useRef } from 'react';
+import { useExperience } from '../../lib/hooks/useFirestore';
+import { Experience } from '../../lib/types';
 
-export default function Experience() {
-  const ref    = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
-  const [expanded, setExpanded] = useState<string | null>(null);
+interface ExperienceNodeProps {
+  experience: Experience;
+  index: number;
+  totalNodes: number;
+  isLeft: boolean;
+  nodeY: number;
+  isVisible: boolean;
+  delay: number;
+}
+
+function ExperienceNode({ experience, index, totalNodes, isLeft, nodeY, isVisible, delay }: ExperienceNodeProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  const nodeStyle = {
+    position: 'absolute' as const,
+    left: isLeft ? '50%' : '50%',
+    transform: isLeft ? 'translateX(-50%)' : 'translateX(-50%)',
+    top: `${nodeY}px`,
+    opacity: isVisible ? 1 : 0,
+    transition: `opacity 0.5s ease ${delay}ms`,
+    zIndex: 10
+  };
+
+  const circleStyle = {
+    width: '16px',
+    height: '16px',
+    background: 'var(--surface-high)',
+    border: '2px solid var(--border)',
+    borderRadius: '50%',
+    position: 'absolute' as const,
+    left: '50%',
+    top: '50%',
+    transform: 'translate(-50%, -50%)',
+    cursor: 'pointer',
+    zIndex: 2
+  };
+
+  const cardStyle = {
+    position: 'absolute' as const,
+    width: '320px',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '20px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    ...(isLeft ? { right: '40px' } : { left: '40px' }),
+    transition: 'all 0.3s var(--ease)',
+    cursor: 'pointer'
+  };
+
+  const expandedCardStyle = {
+    ...cardStyle,
+    maxHeight: isExpanded ? '500px' : '72px',
+    overflow: 'hidden'
+  };
 
   return (
-    <section
-      ref={ref}
+    <div style={nodeStyle}>
+      {/* Timeline circle */}
+      <div style={circleStyle} />
+      
+      {/* Experience card */}
+      <div 
+        style={expandedCardStyle}
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => setIsExpanded(false)}
+      >
+        <div style={{
+          fontFamily: 'var(--font-ui)',
+          fontSize: '14px',
+          color: 'var(--text-primary)',
+          marginBottom: '4px',
+          fontWeight: 'bold'
+        }}>
+          {experience.role}
+        </div>
+        <div style={{
+          fontFamily: 'var(--font-body)',
+          fontSize: '12px',
+          color: 'var(--text-secondary)',
+          marginBottom: isExpanded ? '12px' : '0'
+        }}>
+          {experience.company} • {experience.duration}
+        </div>
+        
+        {/* Expanded details */}
+        {isExpanded && (
+          <div style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: '13px',
+            lineHeight: '1.5',
+            color: 'var(--text-secondary)'
+          }}>
+            {experience.description.map((desc, idx) => (
+              <div key={idx} style={{
+                marginBottom: '8px',
+                paddingLeft: '16px',
+                position: 'relative'
+              }}>
+                <span style={{
+                  position: 'absolute' as const,
+                  left: '0',
+                  color: 'var(--text-muted)'
+                }}>
+                  •
+                </span>
+                {desc}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Generate SVG path dynamically based on node count
+function generateTimelinePath(nodeCount: number): string {
+  if (nodeCount === 0) return '';
+  
+  const nodeSpacing = 120; // Consistent spacing between nodes
+  const amplitude = 40; // Wave amplitude
+  
+  let path = `M 50 ${nodeSpacing}`; // Start at first node
+  
+  for (let i = 1; i <= nodeCount; i++) {
+    const currentY = i * nodeSpacing;
+    const prevY = (i - 1) * nodeSpacing;
+    
+    // Control points for cubic bezier
+    const cx1 = 50 + (i % 2 === 0 ? amplitude : -amplitude);
+    const cy1 = prevY + nodeSpacing * 0.3;
+    const cx2 = 50 + (i % 2 === 0 ? -amplitude : amplitude);
+    const cy2 = currentY - nodeSpacing * 0.3;
+    
+    path += ` C ${cx1} ${cy1}, ${cx2} ${cy2}, 50 ${currentY}`;
+  }
+  
+  return path;
+}
+
+export default function Experience() {
+  const { data: experiences, loading, error } = useExperience();
+  const [pathLength, setPathLength] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const pathRef = useRef<SVGPathElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (pathRef.current) {
+      const length = pathRef.current.getTotalLength();
+      setPathLength(length);
+    }
+  }, [experiences]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px',
+        color: 'var(--text-secondary)',
+        fontFamily: 'var(--font-body)'
+      }}>
+        Loading experience...
+      </div>
+    );
+  }
+
+  if (error || !experiences) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px',
+        color: 'var(--text-muted)',
+        fontFamily: 'var(--font-body)'
+      }}>
+        No experience data available.
+      </div>
+    );
+  }
+
+  const nodeCount = experiences.length;
+  const nodeSpacing = 120; // Consistent spacing between nodes
+  const totalHeight = (nodeCount + 1) * nodeSpacing; // Dynamic total height
+  const timelinePath = generateTimelinePath(nodeCount);
+
+  return (
+    <section 
+      ref={sectionRef}
       style={{
-        minHeight: "100vh",
-        padding: "80px 40px",
-        background: "var(--bg)",
+        padding: 'var(--section-pad)',
+        minHeight: '100vh',
+        position: 'relative',
+        height: 'auto',
+        paddingBottom: `${totalHeight + 100}px` // Extra padding for last node
       }}
     >
-      <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      <h2 style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: '48px',
+        color: 'var(--text-primary)',
+        marginBottom: '48px',
+        textAlign: 'center'
+      }}>
+        Experience
+      </h2>
 
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          style={{ marginBottom: 64 }}
-        >
-          <p style={{
-            fontFamily: "var(--font-ui)", fontSize: 11,
-            color: "var(--secondary)", letterSpacing: "0.2em",
-            textTransform: "uppercase", marginBottom: 8,
-          }}>
-            05 — Where I've Worked
-          </p>
-          <h2 style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(40px, 6vw, 64px)",
-            color: "var(--body)", lineHeight: 1,
-          }}>
-            EXPERIENCE
-          </h2>
-        </motion.div>
+      {/* SVG Timeline */}
+      <svg
+        ref={svgRef}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: '0',
+          transform: 'translateX(-50%)',
+          width: '100px',
+          height: `${totalHeight}px`,
+          pointerEvents: 'none',
+          zIndex: 1
+        }}
+      >
+        <path
+          ref={pathRef}
+          d={timelinePath}
+          stroke="var(--border)"
+          strokeWidth="2"
+          fill="none"
+          style={{
+            strokeDasharray: pathLength,
+            strokeDashoffset: isVisible ? 0 : pathLength,
+            transition: 'stroke-dashoffset 2s ease-out'
+          }}
+        />
+      </svg>
 
-        {/* Timeline */}
-        <div style={{ position: "relative" }}>
-
-          {/* Vertical line */}
-          <motion.div
-            initial={{ scaleY: 0 }}
-            animate={inView ? { scaleY: 1 } : {}}
-            transition={{ duration: 1, delay: 0.3, ease: "easeInOut" }}
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: 0,
-              bottom: 0,
-              width: 1,
-              background: "linear-gradient(to bottom, var(--primary), var(--secondary), var(--cta))",
-              transformOrigin: "top",
-              transform: "translateX(-50%)",
-            }}
-            className="timeline-line"
+      {/* Experience Nodes */}
+      {experiences.map((experience, index) => {
+        const nodeY = (index + 1) * nodeSpacing;
+        const isLeft = index % 2 === 0;
+        const delay = (index / nodeCount) * 2000 + 200; // Proportional to path position
+        
+        return (
+          <ExperienceNode
+            key={experience.id}
+            experience={experience}
+            index={index}
+            totalNodes={nodeCount}
+            isLeft={isLeft}
+            nodeY={nodeY}
+            isVisible={isVisible}
+            delay={delay}
           />
-
-          {experience.map((exp, i) => {
-            const isLeft  = i % 2 === 0;
-            const isOpen  = expanded === exp.id;
-
-            return (
-              <motion.div
-                key={exp.id}
-                initial={{ opacity: 0, x: isLeft ? -60 : 60 }}
-                animate={inView ? { opacity: 1, x: 0 } : {}}
-                transition={{ duration: 0.6, delay: i * 0.15 + 0.4 }}
-                style={{
-                  display: "flex",
-                  justifyContent: isLeft ? "flex-end" : "flex-start",
-                  paddingRight: isLeft ? "calc(50% + 32px)" : 0,
-                  paddingLeft:  isLeft ? 0 : "calc(50% + 32px)",
-                  marginBottom: 48,
-                  position: "relative",
-                }}
-                className="timeline-item"
-              >
-                {/* Dot */}
-                <motion.div
-                  animate={inView ? {
-                    scale: [1, 1.3, 1],
-                    boxShadow: [
-                      "0 0 0 0 rgba(10,196,224,0)",
-                      "0 0 0 8px rgba(10,196,224,0.15)",
-                      "0 0 0 0 rgba(10,196,224,0)",
-                    ],
-                  } : {}}
-                  transition={{
-                    delay: i * 0.15 + 0.6,
-                    duration: 0.8,
-                    repeat: Infinity,
-                    repeatDelay: 3,
-                  }}
-                  style={{
-                    position: "absolute",
-                    left: "50%",
-                    top: 20,
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    background: "var(--secondary)",
-                    border: "2px solid var(--bg)",
-                    transform: "translateX(-50%)",
-                    zIndex: 2,
-                  }}
-                  className="timeline-dot"
-                />
-
-                {/* Card */}
-                <div
-                  onClick={() => setExpanded(isOpen ? null : exp.id)}
-                  style={{
-                    background: "var(--surface)",
-                    border: `1px solid ${isOpen ? "rgba(10,196,224,0.3)" : "rgba(246,231,188,0.06)"}`,
-                    borderRadius: 16,
-                    padding: 24,
-                    width: "100%",
-                    cursor: "pointer",
-                    transition: "border-color 0.3s, transform 0.2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-                  }}
-                >
-                  {/* Role */}
-                  <div style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "flex-start",
-                    marginBottom: 4,
-                  }}>
-                    <h3 style={{
-                      fontFamily: "var(--font-display)",
-                      fontSize: 20,
-                      color: "var(--body)",
-                      lineHeight: 1.1,
-                    }}>
-                      {exp.role}
-                    </h3>
-                    {/* Expand icon */}
-                    <motion.div
-                      animate={{ rotate: isOpen ? 180 : 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="var(--muted)" strokeWidth="2" strokeLinecap="round">
-                        <polyline points="6 9 12 15 18 9"/>
-                      </svg>
-                    </motion.div>
-                  </div>
-
-                  {/* Company + duration */}
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    marginBottom: 12,
-                  }}>
-                    <span style={{
-                      fontFamily: "var(--font-body)",
-                      fontSize: 13,
-                      color: "var(--secondary)",
-                    }}>
-                      {exp.company}
-                    </span>
-                    <span style={{ color: "var(--muted)", fontSize: 10 }}>·</span>
-                    <span style={{
-                      fontFamily: "var(--font-ui)",
-                      fontSize: 10,
-                      letterSpacing: "0.06em",
-                      color: "var(--muted)",
-                    }}>
-                      {exp.duration}
-                    </span>
-                    {exp.location && (
-                      <>
-                        <span style={{ color: "var(--muted)", fontSize: 10 }}>·</span>
-                        <span style={{
-                          fontFamily: "var(--font-ui)",
-                          fontSize: 10,
-                          color: "var(--muted)",
-                          letterSpacing: "0.04em",
-                        }}>
-                          {exp.location}
-                        </span>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Expandable bullets */}
-                  <AnimatePresence>
-                    {isOpen && (
-                      <motion.ul
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.35 }}
-                        style={{
-                          listStyle: "none",
-                          padding: 0,
-                          margin: 0,
-                          overflow: "hidden",
-                        }}
-                      >
-                        {exp.description.map((bullet, bi) => (
-                          <motion.li
-                            key={bi}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: bi * 0.07 }}
-                            style={{
-                              display: "flex",
-                              gap: 10,
-                              alignItems: "flex-start",
-                              marginBottom: 10,
-                              fontFamily: "var(--font-body)",
-                              fontSize: 13,
-                              color: "var(--muted)",
-                              lineHeight: 1.65,
-                            }}
-                          >
-                            <span style={{
-                              color: "var(--secondary)",
-                              marginTop: 6,
-                              flexShrink: 0,
-                            }}>
-                              <svg width="6" height="6" viewBox="0 0 6 6">
-                                <circle cx="3" cy="3" r="3" fill="currentColor"/>
-                              </svg>
-                            </span>
-                            {bullet}
-                          </motion.li>
-                        ))}
-                      </motion.ul>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .timeline-line { left: 16px !important; }
-          .timeline-dot  { left: 16px !important; }
-          .timeline-item {
-            justify-content: flex-start !important;
-            padding-left: 48px !important;
-            padding-right: 0 !important;
-          }
-        }
-      `}</style>
+        );
+      })}
     </section>
   );
 }

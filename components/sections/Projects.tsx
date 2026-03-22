@@ -1,377 +1,410 @@
-"use client";
+    'use client';
 
-import { useState, useRef } from "react";
-import { motion, useInView, AnimatePresence } from "framer-motion";
-import { projects } from "@/lib/data";
+    import { useState } from 'react';
+    import { useProjects } from '../../lib/hooks/useFirestore';
+    import { Project } from '../../lib/types';
 
-const filters = ["All", "ML", "Full Stack", "Tools"];
+    interface BookCardProps {
+      project: Project;
+    }
 
-const statusColors: Record<string, string> = {
-  Live:        "rgba(10,196,224,0.15)",
-  Production:  "rgba(112,69,175,0.15)",
-  "Open Source": "rgba(225,69,148,0.15)",
-  Delivered:   "rgba(246,231,188,0.1)",
-};
-const statusText: Record<string, string> = {
-  Live:        "var(--secondary)",
-  Production:  "var(--primary)",
-  "Open Source": "var(--cta)",
-  Delivered:   "var(--muted)",
-};
+    function BookCard({ project }: BookCardProps) {
+      const [isExpanded, setIsExpanded] = useState(false);
+      const [currentPage, setCurrentPage] = useState(0);
 
-function ProjectCard({ project, index }: { project: typeof projects[0]; index: number }) {
-  const [flipped, setFlipped] = useState(false);
-  const [tilt, setTilt]       = useState({ x: 0, y: 0 });
+      const totalPages = 3;
+      const pageTitles = ['Description', 'Technologies', 'Purpose'];
 
-  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const r  = e.currentTarget.getBoundingClientRect();
-    const x  = ((e.clientY - r.top)  / r.height - 0.5) * 15;
-    const y  = ((e.clientX - r.left) / r.width  - 0.5) * -15;
-    setTilt({ x, y });
-  };
-  const onMouseLeave = () => setTilt({ x: 0, y: 0 });
+      const handleNextPage = () => {
+        if (currentPage < totalPages - 1) {
+          setCurrentPage(currentPage + 1);
+        }
+      };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      transition={{ duration: 0.5, delay: index * 0.08 }}
-      style={{ perspective: 1000 }}
-      onMouseMove={onMouseMove}
-      onMouseLeave={onMouseLeave}
-    >
-      <div
-        onClick={() => setFlipped((f) => !f)}
-        style={{
-          position: "relative",
-          width: "100%",
-          height: 280,
-          transformStyle: "preserve-3d",
-          transform: flipped
-            ? "rotateY(180deg)"
-            : `rotateY(${tilt.y}deg) rotateX(${tilt.x}deg)`,
-          transition: "transform 0.6s cubic-bezier(0.4,0,0.2,1)",
-          cursor: "pointer",
-        }}
-      >
-        {/* ── FRONT ── */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backfaceVisibility: "hidden",
-            WebkitBackfaceVisibility: "hidden",
-            background: "var(--surface)",
-            border: "1px solid rgba(246,231,188,0.06)",
-            borderRadius: 16,
-            padding: 24,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            overflow: "hidden",
-          }}
-        >
-          {/* Top row */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            {/* Category icon */}
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                background: "linear-gradient(135deg, var(--primary), var(--cta))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {project.category === "ML" ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--body)" strokeWidth="2" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="3"/>
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                </svg>
-              ) : project.category === "Full Stack" ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--body)" strokeWidth="2" strokeLinecap="round">
-                  <rect x="2" y="3" width="20" height="14" rx="2"/>
-                  <path d="M8 21h8M12 17v4"/>
-                </svg>
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--body)" strokeWidth="2" strokeLinecap="round">
-                  <polyline points="16 18 22 12 16 6"/>
-                  <polyline points="8 6 2 12 8 18"/>
-                </svg>
-              )}
+      const handlePrevPage = () => {
+        if (currentPage > 0) {
+          setCurrentPage(currentPage - 1);
+        }
+      };
+
+      const handleClose = () => {
+        setIsExpanded(false);
+        setCurrentPage(0);
+      };
+
+      const handleBackdropClick = (e: React.MouseEvent) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      };
+
+      const bookStyle = {
+        perspective: '600px',
+        transformOrigin: 'center'
+      };
+
+      const coverStyle = {
+        transformOrigin: '0',
+        transition: 'all 0.5s var(--ease)',
+        transform: isExpanded ? 'rotateY(-180deg)' : 'rotateY(0deg)'
+      };
+
+      const pageStyle = (pageIndex: number) => ({
+        position: 'absolute' as const,
+        width: '100%',
+        height: '100%',
+        backfaceVisibility: 'hidden' as const,
+        transform: `rotateY(${pageIndex * 180}deg)`,
+        transition: 'transform 0.6s var(--ease)',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: '4px',
+        padding: '24px',
+        display: 'flex',
+        flexDirection: 'column' as const,
+        justifyContent: 'center'
+      });
+
+      const pagesContainerStyle = {
+        position: 'relative' as const,
+        width: '100%',
+        height: '100%',
+        transformStyle: 'preserve-3d' as const,
+        transform: `rotateY(${-currentPage * 180}deg)`,
+        transition: 'transform 0.6s var(--ease)'
+      };
+
+      const cardStyle = {
+        width: '200px',
+        height: '280px',
+        position: 'relative' as const,
+        transformStyle: 'preserve-3d' as const,
+        cursor: 'pointer',
+        margin: '16px'
+      };
+
+      const expandedCardStyle = {
+        width: '40vw',
+        height: '60vh',
+        maxWidth: '600px',
+        maxHeight: '500px',
+        position: 'fixed' as const,
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 1000,
+        margin: '0'
+      };
+
+      const backdropStyle = {
+        position: 'fixed' as const,
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(0, 0, 0, 0.8)',
+        zIndex: 999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      };
+
+      const coverContent = (
+        <div style={{
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+          background: 'var(--surface-high)',
+          border: '1px solid var(--border)',
+          borderRadius: '4px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+          backfaceVisibility: 'hidden' as const,
+          transform: 'rotateY(0deg)'
+        }}>
+          <h3 style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: '14px',
+            color: 'var(--text-primary)',
+            marginBottom: '8px',
+            textAlign: 'center'
+          }}>
+            {project.title}
+          </h3>
+          <div style={{
+            fontSize: '12px',
+            color: 'var(--text-secondary)',
+            textAlign: 'center'
+          }}>
+            {project.status}
+          </div>
+        </div>
+      );
+
+      const pageContent = [
+        // Page 1: Description
+        <div key="description">
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '24px',
+            color: 'var(--text-primary)',
+            marginBottom: '16px'
+          }}>
+            {project.title}
+          </h2>
+          <p style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: '16px',
+            lineHeight: '1.6',
+            color: 'var(--text-secondary)'
+          }}>
+            {project.description}
+          </p>
+        </div>,
+
+        // Page 2: Technologies
+        <div key="technologies">
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '24px',
+            color: 'var(--text-primary)',
+            marginBottom: '16px'
+          }}>
+            Technologies
+          </h2>
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            {project.technologies.map((tech, index) => (
+              <span key={index} style={{
+                background: 'var(--surface-high)',
+                border: '1px solid var(--border)',
+                borderRadius: '12px',
+                padding: '4px 12px',
+                fontSize: '12px',
+                color: 'var(--text-secondary)',
+                fontFamily: 'var(--font-ui)'
+              }}>
+                {tech}
+              </span>
+            ))}
+          </div>
+        </div>,
+
+        // Page 3: Purpose
+        <div key="purpose">
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '24px',
+            color: 'var(--text-primary)',
+            marginBottom: '16px'
+          }}>
+            Purpose
+          </h2>
+          {/* TODO: replace with project.purpose once added to Firestore */}
+          <p style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: '16px',
+            lineHeight: '1.6',
+            color: 'var(--text-secondary)'
+          }}>
+            Built with {project.technologies.join(', ')} to explore {project.title.toLowerCase()}.
+          </p>
+        </div>
+      ];
+
+      const bookCard = (
+        <div style={isExpanded ? expandedCardStyle : cardStyle}>
+          <div style={bookStyle}>
+            {/* Cover */}
+            <div style={coverStyle}>
+              {coverContent}
             </div>
 
-            {/* Status badge */}
-            <span
-              style={{
-                fontFamily: "var(--font-ui)",
-                fontSize: 10,
-                letterSpacing: "0.08em",
-                padding: "4px 10px",
-                borderRadius: 100,
-                background: statusColors[project.status] ?? "rgba(246,231,188,0.1)",
-                color: statusText[project.status] ?? "var(--muted)",
-              }}
-            >
-              {project.status}
-            </span>
-          </div>
-
-          {/* Title */}
-          <div>
-            <h3
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 22,
-                color: "var(--body)",
-                marginBottom: 8,
-                lineHeight: 1.1,
-              }}
-            >
-              {project.title}
-            </h3>
-
-            {/* Tech tags */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {project.tech.slice(0, 4).map((t) => (
-                <span
-                  key={t}
-                  style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: 9,
-                    letterSpacing: "0.06em",
-                    padding: "3px 8px",
-                    borderRadius: 100,
-                    border: "1px solid rgba(10,196,224,0.25)",
-                    color: "var(--secondary)",
-                  }}
-                >
-                  {t}
-                </span>
+            {/* Pages Container */}
+            <div style={pagesContainerStyle}>
+              {pageContent.map((content, pageIndex) => (
+                <div key={pageIndex} style={pageStyle(pageIndex)}>
+                  {content}
+                </div>
               ))}
             </div>
-          </div>
 
-          {/* Flip hint */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              color: "var(--muted)",
-              fontFamily: "var(--font-ui)",
-              fontSize: 10,
-              letterSpacing: "0.08em",
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M1 4v6h6M23 20v-6h-6"/>
-              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-            </svg>
-            CLICK TO FLIP
+            {/* Navigation buttons (only visible when expanded) */}
+            {isExpanded && (
+              <>
+                {/* Previous button */}
+                {currentPage > 0 && (
+                  <button
+                    onClick={handlePrevPage}
+                    style={{
+                      position: 'absolute',
+                      left: '-40px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'var(--surface-high)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '50%',
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '16px'
+                    }}
+                  >
+                    ←
+                  </button>
+                )}
+
+                {/* Next button */}
+                {currentPage < totalPages - 1 && (
+                  <button
+                    onClick={handleNextPage}
+                    style={{
+                      position: 'absolute',
+                      right: '-40px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'var(--surface-high)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '50%',
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: 'var(--text-primary)',
+                      fontFamily: 'var(--font-ui)',
+                      fontSize: '16px'
+                    }}
+                  >
+                    →
+                  </button>
+                )}
+
+                {/* Close button */}
+                <button
+                  onClick={handleClose}
+                  style={{
+                    position: 'absolute',
+                    top: '-40px',
+                    right: '0',
+                    background: 'var(--surface-high)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '4px',
+                    padding: '8px 16px',
+                    cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-ui)',
+                    fontSize: '12px'
+                  }}
+                >
+                  ✕
+                </button>
+
+                {/* Page indicator */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '-40px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  color: 'var(--text-muted)',
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '12px'
+                }}>
+                  {pageTitles[currentPage]} ({currentPage + 1}/{totalPages})
+                </div>
+              </>
+            )}
           </div>
         </div>
+      );
 
-        {/* ── BACK ── */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            backfaceVisibility: "hidden",
-            WebkitBackfaceVisibility: "hidden",
-            transform: "rotateY(180deg)",
-            background: "var(--surface)",
-            border: "1px solid rgba(112,69,175,0.3)",
-            borderRadius: 16,
-            padding: 24,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-          }}
-        >
-          <div>
-            <h3
-              style={{
-                fontFamily: "var(--font-display)",
-                fontSize: 20,
-                color: "var(--secondary)",
-                marginBottom: 10,
-              }}
-            >
-              {project.title}
-            </h3>
-            <p
-              style={{
-                fontFamily: "var(--font-body)",
-                fontSize: 13,
-                color: "var(--muted)",
-                lineHeight: 1.7,
-              }}
-            >
-              {project.description}
-            </p>
+      if (isExpanded) {
+        return (
+          <div style={backdropStyle} onClick={handleBackdropClick}>
+            {bookCard}
           </div>
+        );
+      }
 
-          {/* Links */}
-          {/* Links */}
-<div style={{ display: "flex", gap: 10 }}>
-  {project.github && (
-    <a
-      href={project.github}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => e.stopPropagation()}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        fontFamily: "var(--font-ui)",
-        fontSize: 11,
-        letterSpacing: "0.08em",
-        padding: "8px 16px",
-        borderRadius: 100,
-        border: "1px solid rgba(246,231,188,0.15)",
-        color: "var(--body)",
-        textDecoration: "none",
-        transition: "border-color 0.2s",
-      }}
-    >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.267 1.98-.4 3-.405 1.02.005 2.04.138 3 .405 2.28-1.56 3.285-1.23 3.285-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
-      </svg>
-      GITHUB
-    </a>
-  )}
-  {project.live && (
-    <a
-      href={project.live}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={(e) => e.stopPropagation()}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        fontFamily: "var(--font-ui)",
-        fontSize: 11,
-        letterSpacing: "0.08em",
-        padding: "8px 16px",
-        borderRadius: 100,
-        background: "linear-gradient(135deg, var(--primary), var(--cta))",
-        color: "var(--body)",
-        textDecoration: "none",
-      }}
-    >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-        <polyline points="15 3 21 3 21 9"/>
-        <line x1="10" y1="14" x2="21" y2="3"/>
-      </svg>
-      LIVE DEMO
-    </a>
-  )}
-</div>
+      return (
+        <div onClick={() => setIsExpanded(true)}>
+          {bookCard}
         </div>
-      </div>
-    </motion.div>
-  );
-}
+      );
+    }
 
-export default function Projects() {
-  const [active, setActive] = useState("All");
-  const ref    = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
+    export default function Projects() {
+      const { data: projects, loading, error } = useProjects();
 
-  const filtered = active === "All"
-    ? projects
-    : projects.filter((p) => p.category === active);
-
-  return (
-    <section
-      ref={ref}
-      style={{
-        minHeight: "100vh",
-        padding: "80px 40px",
-        background: "var(--bg)",
-      }}
-    >
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          style={{ marginBottom: 48 }}
-        >
-          <p style={{
-            fontFamily: "var(--font-ui)", fontSize: 11,
-            color: "var(--secondary)", letterSpacing: "0.2em",
-            textTransform: "uppercase", marginBottom: 8,
+      if (loading) {
+        return (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '400px',
+            color: 'var(--text-secondary)',
+            fontFamily: 'var(--font-body)'
           }}>
-            03 — What I've Built
-          </p>
+            Loading projects...
+          </div>
+        );
+      }
+
+      if (error || !projects) {
+        return (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '400px',
+            color: 'var(--text-muted)',
+            fontFamily: 'var(--font-body)'
+          }}>
+            No projects available.
+          </div>
+        );
+      }
+
+      return (
+        <section style={{
+          padding: 'var(--section-pad)',
+          minHeight: '100vh'
+        }}>
           <h2 style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(40px, 6vw, 64px)",
-            color: "var(--body)", lineHeight: 1,
+            fontFamily: 'var(--font-display)',
+            fontSize: '48px',
+            color: 'var(--text-primary)',
+            marginBottom: '48px',
+            textAlign: 'center'
           }}>
-            PROJECTS
+            Projects
           </h2>
-        </motion.div>
 
-        {/* Filter tabs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          style={{ display: "flex", gap: 8, marginBottom: 40, flexWrap: "wrap" }}
-        >
-          {filters.map((f) => (
-            <button
-              suppressHydrationWarning  
-              key={f}
-              onClick={() => setActive(f)}
-              style={{
-                fontFamily: "var(--font-ui)",
-                fontSize: 11,
-                letterSpacing: "0.08em",
-                padding: "8px 20px",
-                borderRadius: 100,
-                border: active === f
-                  ? "1px solid var(--secondary)"
-                  : "1px solid rgba(246,231,188,0.1)",
-                background: active === f
-                  ? "rgba(10,196,224,0.1)"
-                  : "transparent",
-                color: active === f ? "var(--secondary)" : "var(--muted)",
-                transition: "all 0.2s",
-              }}
-            >
-              {f}
-            </button>
-          ))}
-        </motion.div>
-
-        {/* Cards grid */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={active}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-              gap: 20,
-            }}
-          >
-            {filtered.map((p, i) => (
-              <ProjectCard key={p.id} project={p} index={i} />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            justifyContent: 'center',
+            gap: '16px',
+            maxWidth: '1200px',
+            margin: '0 auto'
+          }}>
+            {projects.map((project) => (
+              <BookCard key={project.id} project={project} />
             ))}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-    </section>
-  );
-}
+          </div>
+        </section>
+      );
+    }

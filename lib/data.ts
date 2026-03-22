@@ -12,10 +12,10 @@ export const siteConfig = {
 };
 
 export const stats = [
-  { value: 350, label: "Problems Solved" },
-  { value: 8,   label: "Projects Built" },
-  { value: 1757, label: "LeetCode Rating" },
-  { value: 3,   label: "Internships" },
+  { value: 350,  suffix: "+", label: "Problems Solved" },
+  { value: 8,    suffix: "",  label: "Projects Built" },
+  { value: 1757, suffix: "",  label: "LeetCode Rating" },
+  { value: 3,    suffix: "",  label: "Internships" },
 ];
 
 export const bio = [
@@ -33,7 +33,6 @@ export const projects = [
     github: "https://github.com/Yuvanraj-K-S",
     live: "",
     status: "Live",
-    image: "",
   },
   {
     id: "2",
@@ -44,7 +43,6 @@ export const projects = [
     github: "https://github.com/Yuvanraj-K-S",
     live: "",
     status: "Live",
-    image: "",
   },
   {
     id: "3",
@@ -55,7 +53,6 @@ export const projects = [
     github: "https://github.com/Yuvanraj-K-S",
     live: "",
     status: "Live",
-    image: "",
   },
   {
     id: "4",
@@ -66,7 +63,6 @@ export const projects = [
     github: "",
     live: "",
     status: "Production",
-    image: "",
   },
   {
     id: "5",
@@ -77,7 +73,6 @@ export const projects = [
     github: "",
     live: "",
     status: "Production",
-    image: "",
   },
   {
     id: "6",
@@ -88,7 +83,6 @@ export const projects = [
     github: "",
     live: "",
     status: "Delivered",
-    image: "",
   },
 ];
 
@@ -100,13 +94,6 @@ export const skills = {
   NLP:        ["NLTK", "spaCy", "LangChain", "FAISS", "sentence-transformers"],
   Cloud:      ["Azure OpenAI", "Azure AI Search", "Cosmos DB", "Vercel", "Docker"],
 };
-
-export const skillIcons = [
-  "Python", "JavaScript", "React", "Next.js", "Node.js",
-  "Flask", "FastAPI", "PyTorch", "TensorFlow", "Docker",
-  "MongoDB", "Git", "Azure", "LangChain", "TypeScript",
-  "Tailwind", "Vercel", "HuggingFace", "Scikit-learn", "Linux",
-];
 
 export const experience = [
   {
@@ -136,88 +123,22 @@ export const experience = [
 ];
 
 export const certifications = [
-  {
-    id: "1",
-    name: "Get Started with Python",
-    issuer: "Google",
-    year: "2024",
-    image: "",
-  },
-  {
-    id: "2",
-    name: "Version Control with Git",
-    issuer: "Atlassian",
-    year: "2024",
-    image: "",
-  },
-  {
-    id: "3",
-    name: "Exploratory Data Analysis with Seaborn",
-    issuer: "Coursera",
-    year: "2024",
-    image: "",
-  },
-  {
-    id: "4",
-    name: "Python for Data Analysis: Pandas & NumPy",
-    issuer: "Coursera",
-    year: "2024",
-    image: "",
-  },
-  {
-    id: "5",
-    name: "Introduction to Artificial Intelligence",
-    issuer: "IBM",
-    year: "2024",
-    image: "",
-  },
+  { id: "1", name: "Get Started with Python",                    issuer: "Google",    year: "2024" },
+  { id: "2", name: "Version Control with Git",                   issuer: "Atlassian", year: "2024" },
+  { id: "3", name: "Exploratory Data Analysis with Seaborn",     issuer: "Coursera",  year: "2024" },
+  { id: "4", name: "Python for Data Analysis: Pandas & NumPy",   issuer: "Coursera",  year: "2024" },
+  { id: "5", name: "Introduction to Artificial Intelligence",    issuer: "IBM",        year: "2024" },
 ];
 
 export const achievements = [
-  {
-    id: "1",
-    title: "ABB Hackathon Finalist",
-    description: "Shortlisted among top teams out of hundreds in ABB's national-level engineering innovation hackathon.",
-    date: "2025",
-  },
-  {
-    id: "2",
-    title: "1st Place — Coding Contest, KPRIET",
-    description: "Won first prize at the inter-college competitive programming contest.",
-    date: "2025",
-  },
-  {
-    id: "3",
-    title: "1st Place — Code Debugging, Sri Shakthi Institute",
-    description: "First place in the debugging event across multiple competing colleges.",
-    date: "2025",
-  },
-  {
-    id: "4",
-    title: "LeetCode Top 14%",
-    description: "Rating 1757. Solved 350+ problems. Ranked top 14% globally among 500K+ active users. 3 badges.",
-    date: "2024",
-  },
-  {
-    id: "5",
-    title: "CodeChef 3 Star",
-    description: "Rating 1629. Solved 200+ problems on CodeChef.",
-    date: "2024",
-  },
+  { id: "1", title: "ABB Hackathon Finalist",              description: "Shortlisted among top teams out of hundreds in ABB's national-level engineering innovation hackathon.", date: "2025" },
+  { id: "2", title: "1st Place — Coding Contest, KPRIET",  description: "Won first prize at the inter-college competitive programming contest.",                               date: "2025" },
+  { id: "3", title: "1st Place — Code Debugging, Sri Shakthi", description: "First place in the debugging event across multiple competing colleges.",                        date: "2025" },
+  { id: "4", title: "LeetCode Top 14%",                    description: "Rating 1757. Solved 350+ problems. Ranked top 14% globally among 500K+ active users. 3 badges.",    date: "2024" },
+  { id: "5", title: "CodeChef 3 Star",                     description: "Rating 1629. Solved 200+ problems on CodeChef.",                                                     date: "2024" },
 ];
 
 export const competitive = {
-  leetcode: {
-    handle: "YUVANRAJ_01",
-    rating: 1757,
-    solved: 350,
-    rank: "Top 14%",
-    badges: 3,
-  },
-  codechef: {
-    handle: "kit23bam063",
-    rating: 1629,
-    stars: 3,
-    solved: 200,
-  },
+  leetcode: { handle: "YUVANRAJ_01", rating: 1757, solved: 350, rank: "Top 14%", badges: 3 },
+  codechef: { handle: "kit23bam063", rating: 1629, stars: 3,    solved: 200 },
 };

@@ -1,278 +1,184 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { motion, useInView } from "framer-motion";
-import { stats, bio, siteConfig } from "@/lib/data";
+import { useEffect, useRef, useState } from "react";
+import { siteConfig, bio, stats } from "@/lib/data";
+import { useReveal, useStaggerReveal } from "@/lib/useReveal";
 
-function Counter({ value, inView }: { value: number; inView: boolean }) {
-  const ref = useRef<HTMLSpanElement>(null);
+function useCountUp(target: number, duration = 1800, active = false) {
+  const [value, setValue] = useState(0);
 
   useEffect(() => {
-    if (!inView || !ref.current) return;
-    let current = 0;
-    const step = Math.ceil(value / 60);
-    const timer = setInterval(() => {
-      current = Math.min(current + step, value);
-      if (ref.current) ref.current.textContent = current.toLocaleString();
-      if (current >= value) clearInterval(timer);
-    }, 25);
-    return () => clearInterval(timer);
-  }, [inView, value]);
+    if (!active) return;
+    let start: number | null = null;
+    const step = (ts: number) => {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.floor(eased * target));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [target, duration, active]);
 
-  return <span ref={ref}>0</span>;
+  return value;
+}
+
+function StatItem({ value, suffix, label }: { value: number; suffix: string; label: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(false);
+  const count = useCountUp(value, 1600, active);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setActive(true); observer.disconnect(); } },
+      { threshold: 0.5 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="stagger-item reveal" style={{ textAlign: "left" }}>
+      <div style={{
+        fontFamily: "var(--font-display)",
+        fontSize: "clamp(40px, 6vw, 72px)",
+        fontVariationSettings: "'MORF' 15, 'SHLN' 50",
+        color: "var(--text-primary)",
+        lineHeight: 1,
+        letterSpacing: "-0.02em",
+      }}>
+        {count}{suffix}
+      </div>
+      <div style={{
+        fontFamily: "var(--font-ui)",
+        fontSize: 10,
+        letterSpacing: "0.16em",
+        color: "var(--text-muted)",
+        marginTop: 8,
+      }}>
+        {label.toUpperCase()}
+      </div>
+    </div>
+  );
 }
 
 export default function About() {
-  const ref    = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
+  const sectionRef = useReveal(0.1) as React.RefObject<HTMLElement>;
+  const statsRef   = useStaggerReveal(".stagger-item", 0.2) as React.RefObject<HTMLElement>;
 
   return (
     <section
-      ref={ref}
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "80px 40px",
-        background: "var(--bg)",
-      }}
+      id="about"
+      ref={sectionRef as React.RefObject<HTMLElement>}
+      className="reveal"
+      style={{ padding: "var(--section-pad) clamp(24px, 8vw, 120px)" }}
     >
-      <div
-        style={{
-          maxWidth: 1100,
-          width: "100%",
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 80,
-          alignItems: "center",
-        }}
-        className="about-grid"
-      >
-        {/* ── LEFT — Pentagon stack ── */}
-        <motion.div
-          initial={{ opacity: 0, x: -40 }}
-          animate={inView ? { opacity: 1, x: 0 } : {}}
-          transition={{ duration: 0.7 }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <div
-            className="penta-stack"
-            style={{ position: "relative", width: 280, height: 280 }}
-          >
-            {/* Pentagon layers */}
-            {[
-              { stroke: "rgba(112,69,175,0.15)", scale: 1,    rotate: 0   },
-              { stroke: "rgba(10,196,224,0.2)",  scale: 0.88, rotate: 8   },
-              { stroke: "rgba(225,69,148,0.25)", fill: "rgba(112,69,175,0.06)", scale: 0.76, rotate: -5 },
-            ].map((p, i) => (
-              <svg
-                key={i}
-                viewBox="0 0 280 280"
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  transition: "transform 0.5s ease",
-                }}
-                className={`penta-layer penta-${i}`}
-              >
-                <polygon
-                  points="140,12 268,98 220,242 60,242 12,98"
-                  fill={p.fill ?? "none"}
-                  stroke={p.stroke}
-                  strokeWidth="1.5"
-                  style={{
-                    transform: `scale(${p.scale}) rotate(${p.rotate}deg)`,
-                    transformOrigin: "140px 140px",
-                  }}
-                />
-              </svg>
-            ))}
+      {/* Section label */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 16, marginBottom: 64,
+      }}>
+        <span style={{
+          fontFamily: "var(--font-ui)", fontSize: 10,
+          letterSpacing: "0.2em", color: "var(--text-muted)",
+        }}>
+          01 — ABOUT
+        </span>
+        <div className="rule" style={{ flex: 1, background: "var(--border)" }} />
+      </div>
 
-            {/* Avatar */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 2,
-              }}
-            >
-              <div
-                style={{
-                  width: 160,
-                  height: 160,
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, var(--primary), var(--secondary))",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontFamily: "var(--font-display)",
-                  fontSize: 52,
-                  color: "var(--body)",
-                  letterSpacing: -2,
-                }}
-              >
-                YK
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── RIGHT — Bio + Stats ── */}
-        <motion.div
-          initial={{ opacity: 0, x: 40 }}
-          animate={inView ? { opacity: 1, x: 0 } : {}}
-          transition={{ duration: 0.7, delay: 0.15 }}
-        >
-          <p
-            style={{
-              fontFamily: "var(--font-ui)",
-              fontSize: 11,
-              color: "var(--secondary)",
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              marginBottom: 8,
-            }}
-          >
-            01 — Who I Am
-          </p>
-
-          <h2
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "clamp(40px, 6vw, 64px)",
-              color: "var(--body)",
-              lineHeight: 1,
-              marginBottom: 24,
-            }}
-          >
-            ABOUT
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "clamp(40px, 8vw, 120px)",
+        alignItems: "start",
+      }}>
+        {/* Left — bio */}
+        <div>
+          <h2 style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "clamp(32px, 5vw, 60px)",
+            fontVariationSettings: "'MORF' 15, 'SHLN' 50",
+            color: "var(--text-primary)",
+            lineHeight: 1.05,
+            marginBottom: 32,
+          }}>
+            Building things<br />that work.
           </h2>
 
-          {bio.map((line, i) => (
-            <p
-              key={i}
-              style={{
-                fontFamily: "var(--font-body)",
-                fontSize: 15,
-                color: "var(--muted)",
-                lineHeight: 1.75,
-                marginBottom: 12,
-              }}
-            >
-              {line}
+          {bio.map((p, i) => (
+            <p key={i} style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "clamp(14px, 1.4vw, 16px)",
+              fontWeight: 300,
+              lineHeight: 1.75,
+              color: "var(--text-secondary)",
+              marginBottom: i < bio.length - 1 ? 20 : 0,
+            }}>
+              {p}
             </p>
           ))}
 
-          {/* Stats */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
-              gap: 12,
-              margin: "28px 0",
-            }}
-          >
-            {stats.map((s) => (
-              <div
-                key={s.label}
+          <div style={{ marginTop: 32, display: "flex", gap: 16, flexWrap: "wrap" }}>
+            {[
+              { label: "GitHub", href: siteConfig.github },
+              { label: "LinkedIn", href: siteConfig.linkedin },
+              { label: "Codolio", href: siteConfig.codolio },
+            ].map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
-                  background: "var(--surface)",
-                  border: "1px solid rgba(246,231,188,0.06)",
-                  borderRadius: 12,
-                  padding: "16px 20px",
-                  transition: "border-color 0.2s, transform 0.2s",
+                  fontFamily: "var(--font-ui)",
+                  fontSize: 10, letterSpacing: "0.16em",
+                  color: "var(--text-secondary)",
+                  textDecoration: "none",
+                  borderBottom: "1px solid var(--border)",
+                  paddingBottom: 2,
+                  transition: "color 0.2s, border-color 0.2s",
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(112,69,175,0.4)";
-                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
+                  e.currentTarget.style.color = "var(--text-primary)";
+                  e.currentTarget.style.borderColor = "var(--text-primary)";
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(246,231,188,0.06)";
-                  (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+                  e.currentTarget.style.color = "var(--text-secondary)";
+                  e.currentTarget.style.borderColor = "var(--border)";
                 }}
               >
-                <div
-                  style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: 28,
-                    color: "var(--primary)",
-                  }}
-                >
-                  <Counter value={s.value} inView={inView} />
-                  {s.label === "LeetCode Rating" ? "" : "+"}
-                </div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-body)",
-                    fontSize: 12,
-                    color: "var(--muted)",
-                    marginTop: 2,
-                  }}
-                >
-                  {s.label}
-                </div>
-              </div>
+                {link.label.toUpperCase()} ↗
+              </a>
             ))}
           </div>
+        </div>
 
-          {/* Resume button */}
-          <motion.a
-            href={siteConfig.resumeUrl}
-            download
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
-              fontFamily: "var(--font-ui)",
-              fontSize: 12,
-              letterSpacing: "0.1em",
-              padding: "12px 28px",
-              borderRadius: 100,
-              background: "linear-gradient(135deg, var(--primary), var(--cta))",
-              color: "var(--body)",
-              textDecoration: "none",
-            }}
-          >
-            {/* Download icon */}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            DOWNLOAD RESUME
-          </motion.a>
-        </motion.div>
+        {/* Right — stats */}
+        <div
+          ref={statsRef as React.RefObject<HTMLDivElement>}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "clamp(32px, 4vw, 56px)",
+          }}
+        >
+          {stats.map((s) => (
+            <StatItem key={s.label} value={s.value} suffix={s.suffix} label={s.label} />
+          ))}
+
+          {/* Location */}
+          <div style={{ gridColumn: "1 / -1", paddingTop: 24, borderTop: "1px solid var(--border)" }}>
+            <span style={{
+              fontFamily: "var(--font-ui)", fontSize: 10,
+              letterSpacing: "0.14em", color: "var(--text-muted)",
+            }}>
+              {siteConfig.location.toUpperCase()} — AVAILABLE FOR OPPORTUNITIES
+            </span>
+          </div>
+        </div>
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .about-grid {
-            grid-template-columns: 1fr !important;
-            gap: 40px !important;
-          }
-        }
-        .penta-stack:hover .penta-0 polygon {
-          transform: scale(1.08) rotate(-12deg) !important;
-        }
-        .penta-stack:hover .penta-1 polygon {
-          transform: scale(0.96) rotate(8deg) !important;
-        }
-        .penta-stack:hover .penta-2 polygon {
-          transform: scale(0.84) rotate(-5deg) !important;
-        }
-      `}</style>
     </section>
   );
 }

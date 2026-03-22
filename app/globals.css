@@ -1,135 +1,130 @@
 @import url("https://fonts.googleapis.com/css2?family=Honk:MORF@15&family=Monofett&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap");
-
 @import "tailwindcss";
 
-
-/* REPLACE :root block */
+/* ── Theme tokens injected from lib/theme.ts via layout ── */
 :root {
-  --bg: #F5EFFF;
-  --surface: #EDE4FA;
-  --surface-raised: #E0D5F2;
-  --primary: #B02A3A;
-  --secondary: #3B2A5E;
-  --cta: #7A1828;
-  --body: #1A1A2E;
-  --muted: rgba(26, 26, 46, 0.50);
+  --bg:           #0A0A0A;
+  --surface:      #111111;
+  --surface-high: #1A1A1A;
+  --border:       rgba(255,255,255,0.08);
+
+  --text-primary:   #F0F0F0;
+  --text-secondary: rgba(240,240,240,0.55);
+  --text-muted:     rgba(240,240,240,0.28);
+
+  --accent:     #F0F0F0;
+  --accent-alt: #666666;
+
+  --polygon-color: #F0F0F0;
+
+  --grain-opacity: 0.035;
 
   --font-display: "Honk", cursive;
-  --font-ui: "Monofett", monospace;
-  --font-body: "DM Sans", sans-serif;
+  --font-ui:      "Monofett", monospace;
+  --font-body:    "DM Sans", sans-serif;
+
+  --ease:     cubic-bezier(0.16, 1, 0.3, 1);
+  --duration: 0.7s;
+
+  --section-pad: clamp(80px, 12vw, 160px);
 }
 
-* {
+/* ── Reset ── */
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
 html {
-  scroll-behavior: smooth;
+  /* Lenis handles scroll — do not set scroll-behavior here */
+  scroll-padding-top: 0;
 }
 
 body {
   background: var(--bg);
-  color: var(--body);
+  color: var(--text-primary);
   font-family: var(--font-body);
   overflow-x: hidden;
   cursor: none;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Hide default cursor everywhere */
-* {
-  cursor: none !important;
-}
+* { cursor: none !important; }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 4px;
-}
-/* UPDATE scrollbar */
-::-webkit-scrollbar-track {
-  background: var(--bg);           /* already uses var, fine */
-}
-::-webkit-scrollbar-thumb {
-  background: var(--primary);      /* already uses var, fine */
-}
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 2px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--accent-alt); }
 
-/* UPDATE holo-shift keyframes */
-@keyframes holo-shift {
-  0%   { text-shadow: 0 0 40px rgba(176,42,58,0.7),  0 0 80px rgba(59,42,94,0.3); }
-  33%  { text-shadow: 0 0 40px rgba(59,42,94,0.7),   0 0 80px rgba(122,24,40,0.4); }
-  66%  { text-shadow: 0 0 40px rgba(122,24,40,0.7),  0 0 80px rgba(176,42,58,0.4); }
-  100% { text-shadow: 0 0 40px rgba(176,42,58,0.7),  0 0 80px rgba(59,42,94,0.3); }
-}
-
-/* Section entry animation */
-.section-hidden {
+/* ── Section reveal ── */
+.reveal {
   opacity: 0;
-  transform: translateY(40px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transform: translateY(32px);
+  transition: opacity var(--duration) var(--ease),
+              transform var(--duration) var(--ease);
 }
-.section-visible {
+.reveal.in-view {
   opacity: 1;
   transform: translateY(0);
 }
 
-/* Gradient CTA button */
-.btn-gradient {
-  background: linear-gradient(135deg, var(--primary), var(--cta));
+/* ── Word split animation ── */
+.word {
+  display: inline-block;
+  overflow: hidden;
+}
+.word-inner {
+  display: inline-block;
+  transform: translateY(110%);
+  transition: transform var(--duration) var(--ease);
+}
+.in-view .word-inner {
+  transform: translateY(0);
 }
 
-/* Marquee */
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-.animate-marquee {
-  animation: marquee 20s linear infinite;
-}
-
-/* Holographic name glow */
-@keyframes holo-shift {
-  0%   { text-shadow: 0 0 40px rgba(245,119,153,0.7), 0 0 80px rgba(253,195,161,0.3); }
-  33%  { text-shadow: 0 0 40px rgba(253,195,161,0.7), 0 0 80px rgba(251,155,143,0.4); }
-  66%  { text-shadow: 0 0 40px rgba(251,155,143,0.7), 0 0 80px rgba(245,119,153,0.4); }
-  100% { text-shadow: 0 0 40px rgba(245,119,153,0.7), 0 0 80px rgba(253,195,161,0.3); }
-}
-.holo-text {
-  animation: holo-shift 4s ease-in-out infinite;
+/* ── Noise grain overlay (hero) ── */
+.grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  opacity: var(--grain-opacity);
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  animation: grain-shift 0.5s steps(1) infinite;
+  z-index: 1;
 }
 
-/* Glitch effect */
-@keyframes glitch-a {
-  0%   { clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);    transform: translate(-2px, 1px); }
-  50%  { clip-path: polygon(0 50%, 100% 50%, 100% 75%, 0 75%); transform: translate(2px, -1px); }
-  100% { clip-path: polygon(0 20%, 100% 20%, 100% 55%, 0 55%); transform: translate(-1px, 2px); }
-}
-@keyframes glitch-b {
-  0%   { clip-path: polygon(0 40%, 100% 40%, 100% 70%, 0 70%); transform: translate(2px, -2px); }
-  50%  { clip-path: polygon(0 0, 100% 0, 100% 20%, 0 20%);     transform: translate(-2px, 1px); }
-  100% { clip-path: polygon(0 60%, 100% 60%, 100% 90%, 0 90%); transform: translate(1px, -1px); }
+@keyframes grain-shift {
+  0%   { background-position: 0 0; }
+  20%  { background-position: -40px -40px; }
+  40%  { background-position: 30px -20px; }
+  60%  { background-position: -20px 50px; }
+  80%  { background-position: 50px 30px; }
+  100% { background-position: 0 0; }
 }
 
-/* Jelly bounce */
-@keyframes jelly {
-  0%   { transform: scale3d(1, 1, 1); }
-  20%  { transform: scale3d(1.15, 0.85, 1); }
-  40%  { transform: scale3d(0.85, 1.15, 1); }
-  55%  { transform: scale3d(1.07, 0.94, 1); }
-  70%  { transform: scale3d(0.97, 1.03, 1); }
-  85%  { transform: scale3d(1.02, 0.98, 1); }
-  100% { transform: scale3d(1, 1, 1); }
-}
-
-/* Scroll indicator */
-@keyframes scroll-down {
-  0%   { opacity: 1; top: 6px; }
-  80%  { opacity: 0; top: 18px; }
-  100% { opacity: 0; top: 6px; }
-}
-
-/* Bob animation for loader */
+/* ── Bob (loader) ── */
 @keyframes bob {
   from { transform: translateY(0); }
   to   { transform: translateY(-6px); }
+}
+
+/* ── Horizontal line rule ── */
+.rule {
+  width: 100%;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Section transition blur effects ── */
+.section-blur-exit {
+  filter: blur(8px);
+}
+
+.section-blur-enter {
+  filter: blur(0px);
 }

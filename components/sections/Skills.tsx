@@ -1,349 +1,259 @@
-"use client";
+'use client';
 
-import { JSX, useRef } from "react";
-import { motion, useInView } from "framer-motion";
-import { skills, skillIcons } from "@/lib/data";
+import { useSkills } from '../../lib/hooks/useFirestore';
+import { Skill } from '../../lib/types';
 
-const proficiency: Record<string, number> = {
-  Languages: 85,
-  Frontend:  90,
-  Backend:   82,
-  "ML / AI": 88,
-  NLP:       78,
-  Cloud:     75,
-};
-
-const categoryColors: Record<string, string> = {
-  Languages: "var(--primary)",
-  Frontend:  "var(--secondary)",
-  Backend:   "var(--cta)",
-  "ML / AI": "var(--primary)",
-  NLP:       "var(--secondary)",
-  Cloud:     "var(--cta)",
-};
-
-// SVG icons for tech stack
-const iconPaths: Record<string, JSX.Element> = {
-  Python: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <path d="M12 2C8 2 6 4 6 7v2h6v1H5c-2 0-3 1.5-3 4s1 4 3 4h1v-2c0-2 1-3 3-3h6c2 0 3-1 3-3V7c0-3-2-5-6-5z"/>
-      <path d="M12 22c4 0 6-2 6-5v-2h-6v-1h7c2 0 3-1.5 3-4s-1-4-3-4h-1v2c0 2-1 3-3 3H9c-2 0-3 1-3 3v3c0 3 2 5 6 5z"/>
-      <circle cx="9" cy="7.5" r="1" fill="currentColor" stroke="none"/>
-      <circle cx="15" cy="16.5" r="1" fill="currentColor" stroke="none"/>
-    </svg>
-  ),
-  React: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="12" cy="12" r="2"/>
-      <ellipse cx="12" cy="12" rx="10" ry="4"/>
-      <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"/>
-      <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"/>
-    </svg>
-  ),
-  Docker: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <path d="M22 12.5c0-.8-.7-1.5-1.5-1.5H19v-2h-3V7h-3V5H9v2H6v2H3v2H2c-.8 0-1.5.7-1.5 1.5v.5c0 3.3 2.7 6 6 6h8c3.3 0 6-2.7 6-6v-.5z"/>
-      <line x1="6" y1="9" x2="6" y2="11"/>
-      <line x1="9" y1="7" x2="9" y2="11"/>
-      <line x1="12" y1="9" x2="12" y2="11"/>
-      <line x1="15" y1="9" x2="15" y2="11"/>
-    </svg>
-  ),
-  Git: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <circle cx="6" cy="6" r="2"/>
-      <circle cx="18" cy="6" r="2"/>
-      <circle cx="6" cy="18" r="2"/>
-      <path d="M8 6h8M6 8v8M8 18h3"/>
-      <path d="M14 18a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v0"/>
-    </svg>
-  ),
-  default: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <rect x="3" y="3" width="18" height="18" rx="3"/>
-      <path d="M9 9l6 6M15 9l-6 6"/>
-    </svg>
-  ),
-};
-
-function getIcon(name: string) {
-  return iconPaths[name] ?? iconPaths.default;
+// Deterministic hash function for consistent rotations/offsets
+function hashCode(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
 }
 
-function SkillOrb() {
-  const items = skillIcons;
-  const total = items.length;
+// Derive deterministic values from category name
+function deriveCategoryValues(category: string) {
+  const hash = hashCode(category);
+  const seed = hash % 1000;
+  
+  // Rotation between -12 and +12 degrees
+  const rotation = (seed % 25) - 12;
+  
+  // X and Y offsets for organic placement
+  const xOffset = (seed % 20) - 10; // -10 to +10
+  const yOffset = (seed % 16) - 8;  // -8 to +8
+  
+  // Position percentages for corkboard layout
+  const left = 2 + (seed % 64); // 2% to 65%
+  const top = 2 + (seed % 54);  // 2% to 55%
+  
+  return { rotation, xOffset, yOffset, seed, left, top };
+}
+
+interface StickyNoteProps {
+  category: string;
+  skills: Skill[];
+}
+
+function StickyNote({ category, skills }: StickyNoteProps) {
+  const { rotation, xOffset, yOffset, seed, left, top } = deriveCategoryValues(category);
+  
+  const noteStyle = {
+    position: 'absolute' as const,
+    width: '280px',
+    minHeight: '200px',
+    background: 'var(--surface-high)',
+    border: '1px solid var(--border)',
+    borderRadius: '2px',
+    padding: '20px',
+    left: `${left}%`,
+    top: `${top}%`,
+    transform: `translate(${xOffset}px, ${yOffset}px) rotate(${rotation}deg)`,
+    transition: 'transform 0.3s var(--ease), box-shadow 0.3s var(--ease)',
+    cursor: 'pointer'
+  };
+
+  const noteHoverStyle = {
+    ...noteStyle,
+    transform: `translate(${xOffset}px, ${yOffset - 8}px) rotate(0deg)`,
+    boxShadow: '0 0 32px rgba(240,240,240,0.08)'
+  };
+
+  const pinStyle = {
+    position: 'absolute' as const,
+    top: '-8px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '16px',
+    height: '16px',
+    background: 'var(--accent)',
+    borderRadius: '50%',
+    border: '2px solid var(--surface-high)',
+    zIndex: 2
+  };
+
+  const pinWobbleKeyframes = `
+    @keyframes pin-wobble-${seed} {
+      0%, 100% { transform: translateX(-50%) rotate(0deg); }
+      25% { transform: translateX(-50%) rotate(3deg); }
+      50% { transform: translateX(-50%) rotate(-2deg); }
+      75% { transform: translateX(-50%) rotate(1deg); }
+    }
+  `;
+
+  const skillTagStyle = {
+    display: 'inline-block',
+    margin: '4px',
+    padding: '6px 12px',
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    fontSize: '12px',
+    color: 'var(--text-secondary)',
+    fontFamily: 'var(--font-ui)',
+    transition: 'all 0.2s var(--ease)'
+  };
+
+  const skillTagHoverStyle = {
+    ...skillTagStyle,
+    transform: 'scale(1.05)',
+    borderColor: 'rgba(240,240,240,0.4)',
+    animation: 'pulse 2s ease-in-out infinite'
+  };
+
+  const pulseKeyframes = `
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+  `;
 
   return (
-    <div
-      style={{
-        position: "relative",
-        width: 320,
-        height: 320,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      {/* Center sphere */}
-      <div
-        style={{
-          width: 80,
-          height: 80,
-          borderRadius: "50%",
-          background: "radial-gradient(circle at 35% 35%, var(--secondary), var(--primary))",
-          boxShadow: "0 0 40px rgba(112,69,175,0.4), 0 0 80px rgba(10,196,224,0.2)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 2,
+    <>
+      <style>{pinWobbleKeyframes}{pulseKeyframes}</style>
+      <div 
+        style={noteStyle}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = `translate(${xOffset}px, ${yOffset - 8}px) rotate(0deg)`;
+          e.currentTarget.style.boxShadow = '0 0 32px rgba(240,240,240,0.08)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = `translate(${xOffset}px, ${yOffset}px) rotate(${rotation}deg)`;
+          e.currentTarget.style.boxShadow = 'none';
         }}
       >
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--body)" strokeWidth="1.5">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20M2 12h20"/>
-        </svg>
-      </div>
+        {/* Pin */}
+        <div 
+          style={{
+            ...pinStyle,
+            animation: `pin-wobble-${seed} 3s ease-in-out infinite`
+          }}
+        />
 
-      {/* Orbiting icons — two rings */}
-      {items.map((name, i) => {
-        const ring    = i < 10 ? 0 : 1;
-        const ringR   = ring === 0 ? 120 : 150;
-        const count   = ring === 0 ? 10 : items.length - 10;
-        const idx     = ring === 0 ? i : i - 10;
-        const angle   = (360 / count) * idx;
-        const rad     = (angle * Math.PI) / 180;
-        const x       = Math.cos(rad) * ringR;
-        const y       = Math.sin(rad) * ringR;
-        const delay   = i * 0.1;
-        const duration = ring === 0 ? 20 : 28;
+        {/* Category header */}
+        <h3 style={{
+          fontFamily: 'var(--font-ui)',
+          fontSize: '16px',
+          color: 'var(--text-primary)',
+          marginBottom: '16px',
+          textAlign: 'center'
+        }}>
+          {category}
+        </h3>
 
-        return (
-          <motion.div
-            key={name}
-            title={name}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay, duration: 0.4 }}
-            whileHover={{ scale: 1.4, zIndex: 10 }}
-            style={{
-              position: "absolute",
-              left: "50%",
-              top: "50%",
-              width: 36,
-              height: 36,
-              marginLeft: -18,
-              marginTop: -18,
-              borderRadius: "50%",
-              background: "var(--surface)",
-              border: "1px solid rgba(246,231,188,0.08)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--secondary)",
-              transform: `translate(${x}px, ${y}px)`,
-              animation: `orbit-${ring} ${duration}s linear infinite`,
-              animationDelay: `${-delay * 2}s`,
-              cursor: "default",
-            }}
-          >
-            <div style={{ width: 18, height: 18 }}>
-              {getIcon(name)}
-            </div>
-            {/* Tooltip */}
-            <div
-              style={{
-                position: "absolute",
-                bottom: "calc(100% + 6px)",
-                left: "50%",
-                transform: "translateX(-50%)",
-                background: "var(--surface)",
-                border: "1px solid rgba(10,196,224,0.3)",
-                borderRadius: 6,
-                padding: "3px 8px",
-                fontFamily: "var(--font-ui)",
-                fontSize: 9,
-                color: "var(--secondary)",
-                letterSpacing: "0.06em",
-                whiteSpace: "nowrap",
-                opacity: 0,
-                pointerEvents: "none",
-                transition: "opacity 0.2s",
+        {/* Skills list */}
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '4px',
+          justifyContent: 'center'
+        }}>
+          {skills.map((skill) => (
+            <span
+              key={skill.id}
+              style={skillTagStyle}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'scale(1.05)';
+                e.currentTarget.style.borderColor = 'rgba(240,240,240,0.4)';
+                e.currentTarget.style.animation = 'pulse 2s ease-in-out infinite';
               }}
-              className="skill-tooltip"
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+                e.currentTarget.style.borderColor = 'var(--border)';
+                e.currentTarget.style.animation = 'none';
+              }}
             >
-              {name}
-            </div>
-          </motion.div>
-        );
-      })}
-
-      <style>{`
-        @keyframes orbit-0 {
-          from { transform: rotate(0deg) translateX(120px) rotate(0deg); }
-          to   { transform: rotate(360deg) translateX(120px) rotate(-360deg); }
-        }
-        @keyframes orbit-1 {
-          from { transform: rotate(0deg) translateX(150px) rotate(0deg); }
-          to   { transform: rotate(-360deg) translateX(150px) rotate(360deg); }
-        }
-        .skill-icon:hover .skill-tooltip { opacity: 1 !important; }
-      `}</style>
-    </div>
+              {skill.name}
+            </span>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
 export default function Skills() {
-  const ref    = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
+  const { data: skills, loading, error } = useSkills();
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px',
+        color: 'var(--text-secondary)',
+        fontFamily: 'var(--font-body)'
+      }}>
+        Loading skills...
+      </div>
+    );
+  }
+
+  if (error || !skills) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '400px',
+        color: 'var(--text-muted)',
+        fontFamily: 'var(--font-body)'
+      }}>
+        No skills available.
+      </div>
+    );
+  }
+
+  // Group skills by category
+  const skillsByCategory = skills.reduce((acc, skill) => {
+    if (!acc[skill.category]) {
+      acc[skill.category] = [];
+    }
+    acc[skill.category].push(skill);
+    return acc;
+  }, {} as Record<string, Skill[]>);
+
+  const categories = Object.keys(skillsByCategory);
 
   return (
-    <section
-      ref={ref}
-      style={{
-        minHeight: "100vh",
-        padding: "80px 40px",
-        background: "var(--surface)",
-      }}
-    >
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+    <section style={{
+      padding: 'var(--section-pad)',
+      minHeight: '100vh',
+      position: 'relative'
+    }}>
+      <h2 style={{
+        fontFamily: 'var(--font-display)',
+        fontSize: '48px',
+        color: 'var(--text-primary)',
+        marginBottom: '48px',
+        textAlign: 'center'
+      }}>
+        Skills
+      </h2>
 
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          style={{ marginBottom: 64 }}
-        >
-          <p style={{
-            fontFamily: "var(--font-ui)", fontSize: 11,
-            color: "var(--secondary)", letterSpacing: "0.2em",
-            textTransform: "uppercase", marginBottom: 8,
-          }}>
-            04 — What I Know
-          </p>
-          <h2 style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(40px, 6vw, 64px)",
-            color: "var(--body)", lineHeight: 1,
-          }}>
-            SKILLS
-          </h2>
-        </motion.div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 80,
-            alignItems: "center",
-          }}
-          className="skills-grid"
-        >
-          {/* ── LEFT — Orb ── */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={inView ? { opacity: 1, scale: 1 } : {}}
-            transition={{ duration: 0.7 }}
-            style={{ display: "flex", justifyContent: "center" }}
-          >
-            <SkillOrb />
-          </motion.div>
-
-          {/* ── RIGHT — Progress bars ── */}
-          <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={inView ? { opacity: 1, x: 0 } : {}}
-            transition={{ duration: 0.7, delay: 0.2 }}
-          >
-            {Object.entries(skills).map(([category, items], ci) => (
-              <div key={category} style={{ marginBottom: 28 }}>
-                {/* Category header */}
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 8,
-                }}>
-                  <span style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: 11,
-                    letterSpacing: "0.1em",
-                    color: categoryColors[category] ?? "var(--secondary)",
-                  }}>
-                    {category.toUpperCase()}
-                  </span>
-                  <span style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: 10,
-                    color: "var(--muted)",
-                  }}>
-                    {proficiency[category]}%
-                  </span>
-                </div>
-
-                {/* Progress bar */}
-                <div style={{
-                  height: 3,
-                  background: "rgba(246,231,188,0.08)",
-                  borderRadius: 2,
-                  overflow: "hidden",
-                  marginBottom: 10,
-                }}>
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={inView ? { width: `${proficiency[category]}%` } : {}}
-                    transition={{ duration: 1, delay: ci * 0.1 + 0.3, ease: "easeOut" }}
-                    style={{
-                      height: "100%",
-                      background: `linear-gradient(90deg, ${categoryColors[category]}, var(--cta))`,
-                      borderRadius: 2,
-                    }}
-                  />
-                </div>
-
-                {/* Skill pills */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {items.map((skill) => (
-                    <span
-                      key={skill}
-                      style={{
-                        fontFamily: "var(--font-ui)",
-                        fontSize: 9,
-                        letterSpacing: "0.06em",
-                        padding: "3px 10px",
-                        borderRadius: 100,
-                        border: "1px solid rgba(10,196,224,0.15)",
-                        color: "var(--muted)",
-                        transition: "border-color 0.2s, color 0.2s",
-                      }}
-                      onMouseEnter={(e) => {
-                        (e.target as HTMLSpanElement).style.borderColor = "rgba(10,196,224,0.5)";
-                        (e.target as HTMLSpanElement).style.color = "var(--secondary)";
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.target as HTMLSpanElement).style.borderColor = "rgba(10,196,224,0.15)";
-                        (e.target as HTMLSpanElement).style.color = "var(--muted)";
-                      }}
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </motion.div>
-        </div>
+      {/* Corkboard container */}
+      <div style={{
+        position: 'relative',
+        width: '100%',
+        height: '800px',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
+        borderRadius: '8px'
+      }}>
+        {categories.map((category) => (
+          <StickyNote
+            key={category}
+            category={category}
+            skills={skillsByCategory[category]}
+          />
+        ))}
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .skills-grid {
-            grid-template-columns: 1fr !important;
-            gap: 48px !important;
-          }
-        }
-      `}</style>
     </section>
   );
 }

@@ -1,373 +1,84 @@
 "use client";
 
-import { useRef } from "react";
-import { motion, useInView } from "framer-motion";
-import { achievements, competitive } from "@/lib/data";
-
-const accentColors = [
-  "var(--primary)",
-  "var(--secondary)",
-  "var(--cta)",
-  "var(--primary)",
-  "var(--secondary)",
-];
-
-// SVG icons per achievement type
-function AchievementIcon({ index }: { index: number }) {
-  const icons = [
-    // Trophy
-    <svg key="trophy" width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <path d="M6 9H4a2 2 0 0 1-2-2V5h4"/>
-      <path d="M18 9h2a2 2 0 0 0 2-2V5h-4"/>
-      <path d="M12 17v4"/>
-      <path d="M8 21h8"/>
-      <path d="M6 5h12v7a6 6 0 0 1-12 0V5z"/>
-    </svg>,
-    // Medal
-    <svg key="medal" width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <circle cx="12" cy="15" r="6"/>
-      <path d="M8.5 8.5 8 3h8l-.5 5.5"/>
-      <path d="m9 3 3 4 3-4"/>
-      <path d="M12 12v6"/>
-      <path d="m9 15 3-3 3 3"/>
-    </svg>,
-    // Code
-    <svg key="code" width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <polyline points="16 18 22 12 16 6"/>
-      <polyline points="8 6 2 12 8 18"/>
-    </svg>,
-    // Star
-    <svg key="star" width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-    </svg>,
-    // Chart
-    <svg key="chart" width="20" height="20" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <line x1="18" y1="20" x2="18" y2="10"/>
-      <line x1="12" y1="20" x2="12" y2="4"/>
-      <line x1="6"  y1="20" x2="6"  y2="14"/>
-      <line x1="2"  y1="20" x2="22" y2="20"/>
-    </svg>,
-  ];
-  return icons[index % icons.length];
-}
+import { achievements } from "@/lib/data";
+import { useStaggerReveal } from "@/lib/useReveal";
 
 export default function Achievements() {
-  const ref    = useRef(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
+  const sectionRef = useStaggerReveal(".ach-item", 0.1);
 
   return (
     <section
-      ref={ref}
-      style={{
-        minHeight: "100vh",
-        padding: "80px 40px",
-        background: "var(--bg)",
-      }}
+      id="achievements"
+      ref={sectionRef as React.RefObject<HTMLElement>}
+      style={{ padding: "var(--section-pad) clamp(24px, 8vw, 120px)" }}
     >
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
-
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          style={{ marginBottom: 56 }}
-        >
-          <p style={{
-            fontFamily: "var(--font-ui)", fontSize: 11,
-            color: "var(--secondary)", letterSpacing: "0.2em",
-            textTransform: "uppercase", marginBottom: 8,
-          }}>
-            07 — Recognition
-          </p>
-          <h2 style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(40px, 6vw, 64px)",
-            color: "var(--body)", lineHeight: 1,
-          }}>
-            ACHIEVEMENTS
-          </h2>
-        </motion.div>
-
-        {/* Achievement list */}
-        <div style={{ position: "relative", marginBottom: 64 }}>
-
-          {/* Connector line */}
-          <motion.div
-            initial={{ scaleY: 0 }}
-            animate={inView ? { scaleY: 1 } : {}}
-            transition={{ duration: 1, delay: 0.3 }}
-            style={{
-              position: "absolute",
-              left: 23,
-              top: 0,
-              bottom: 0,
-              width: 1,
-              background:
-                "linear-gradient(to bottom, var(--primary), var(--secondary), var(--cta))",
-              transformOrigin: "top",
-              opacity: 0.3,
-            }}
-          />
-
-          {achievements.map((item, i) => (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, x: -30 }}
-              animate={inView ? { opacity: 1, x: 0 } : {}}
-              transition={{ duration: 0.5, delay: i * 0.1 + 0.4 }}
-              style={{
-                display: "flex",
-                gap: 20,
-                alignItems: "flex-start",
-                marginBottom: 32,
-                position: "relative",
-              }}
-            >
-              {/* Icon circle */}
-              <motion.div
-                animate={inView ? {
-                  scale: [1, 1.2, 1],
-                  boxShadow: [
-                    `0 0 0 0 ${accentColors[i % accentColors.length]}00`,
-                    `0 0 0 8px ${accentColors[i % accentColors.length]}20`,
-                    `0 0 0 0 ${accentColors[i % accentColors.length]}00`,
-                  ],
-                } : {}}
-                transition={{
-                  delay: i * 0.1 + 0.8,
-                  duration: 0.6,
-                  repeat: Infinity,
-                  repeatDelay: 4,
-                }}
-                style={{
-                  width: 46,
-                  height: 46,
-                  borderRadius: "50%",
-                  background: "var(--surface)",
-                  border: `1px solid ${accentColors[i % accentColors.length]}40`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  color: accentColors[i % accentColors.length],
-                  zIndex: 1,
-                }}
-              >
-                <AchievementIcon index={i} />
-              </motion.div>
-
-              {/* Content */}
-              <div
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid rgba(246,231,188,0.06)",
-                  borderRadius: 14,
-                  padding: "18px 22px",
-                  flex: 1,
-                  transition: "border-color 0.2s, transform 0.2s",
-                }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget as HTMLDivElement;
-                  el.style.borderColor = `${accentColors[i % accentColors.length]}40`;
-                  el.style.transform = "translateX(4px)";
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget as HTMLDivElement;
-                  el.style.borderColor = "rgba(246,231,188,0.06)";
-                  el.style.transform = "translateX(0)";
-                }}
-              >
-                <div style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  marginBottom: 6,
-                  flexWrap: "wrap",
-                  gap: 8,
-                }}>
-                  <h3 style={{
-                    fontFamily: "var(--font-body)",
-                    fontSize: 15,
-                    fontWeight: 500,
-                    color: "var(--body)",
-                    lineHeight: 1.3,
-                  }}>
-                    {item.title}
-                  </h3>
-                  <span style={{
-                    fontFamily: "var(--font-ui)",
-                    fontSize: 10,
-                    letterSpacing: "0.08em",
-                    color: accentColors[i % accentColors.length],
-                    padding: "3px 10px",
-                    borderRadius: 100,
-                    background: `${accentColors[i % accentColors.length]}15`,
-                    whiteSpace: "nowrap",
-                  }}>
-                    {item.date}
-                  </span>
-                </div>
-                <p style={{
-                  fontFamily: "var(--font-body)",
-                  fontSize: 13,
-                  color: "var(--muted)",
-                  lineHeight: 1.65,
-                }}>
-                  {item.description}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Competitive Programming stats */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={inView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6, delay: 0.6 }}
-        >
-          <p style={{
-            fontFamily: "var(--font-ui)", fontSize: 11,
-            color: "var(--muted)", letterSpacing: "0.15em",
-            textTransform: "uppercase", marginBottom: 20,
-          }}>
-            Competitive Programming
-          </p>
-
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 16,
-          }}
-          className="cp-grid"
-          >
-            {/* LeetCode */}
-            <div style={{
-              background: "var(--surface)",
-              border: "1px solid rgba(246,231,188,0.06)",
-              borderRadius: 16,
-              padding: 24,
-              transition: "border-color 0.2s",
-            }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLDivElement).style.borderColor =
-                "rgba(10,196,224,0.3)")
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLDivElement).style.borderColor =
-                "rgba(246,231,188,0.06)")
-            }
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                  stroke="var(--secondary)" strokeWidth="1.5" strokeLinecap="round">
-                  <path d="M16 18 22 12 16 6"/>
-                  <path d="M8 6 2 12 8 18"/>
-                </svg>
-                <span style={{
-                  fontFamily: "var(--font-ui)", fontSize: 12,
-                  color: "var(--secondary)", letterSpacing: "0.1em",
-                }}>
-                  LEETCODE
-                </span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                {[
-                  { label: "Rating",  value: competitive.leetcode.rating },
-                  { label: "Solved",  value: `${competitive.leetcode.solved}+` },
-                  { label: "Rank",    value: competitive.leetcode.rank },
-                  { label: "Badges",  value: competitive.leetcode.badges },
-                ].map((s) => (
-                  <div key={s.label}>
-                    <div style={{
-                      fontFamily: "var(--font-ui)", fontSize: 18,
-                      color: "var(--secondary)",
-                    }}>
-                      {s.value}
-                    </div>
-                    <div style={{
-                      fontFamily: "var(--font-body)", fontSize: 11,
-                      color: "var(--muted)", marginTop: 2,
-                    }}>
-                      {s.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* CodeChef */}
-            <div style={{
-              background: "var(--surface)",
-              border: "1px solid rgba(246,231,188,0.06)",
-              borderRadius: 16,
-              padding: 24,
-              transition: "border-color 0.2s",
-            }}
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLDivElement).style.borderColor =
-                "rgba(225,69,148,0.3)")
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLDivElement).style.borderColor =
-                "rgba(246,231,188,0.06)")
-            }
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                  stroke="var(--cta)" strokeWidth="1.5" strokeLinecap="round">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                  <path d="M2 17l10 5 10-5"/>
-                  <path d="M2 12l10 5 10-5"/>
-                </svg>
-                <span style={{
-                  fontFamily: "var(--font-ui)", fontSize: 12,
-                  color: "var(--cta)", letterSpacing: "0.1em",
-                }}>
-                  CODECHEF
-                </span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                {[
-                  { label: "Rating", value: competitive.codechef.rating },
-                  { label: "Solved", value: `${competitive.codechef.solved}+` },
-                  { label: "Stars",  value: "★".repeat(competitive.codechef.stars) },
-                  { label: "Handle", value: competitive.codechef.handle.slice(0, 8) },
-                ].map((s) => (
-                  <div key={s.label}>
-                    <div style={{
-                      fontFamily: "var(--font-ui)", fontSize: 18,
-                      color: "var(--cta)",
-                    }}>
-                      {s.value}
-                    </div>
-                    <div style={{
-                      fontFamily: "var(--font-body)", fontSize: 11,
-                      color: "var(--muted)", marginTop: 2,
-                    }}>
-                      {s.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </motion.div>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 16, marginBottom: 64,
+      }}>
+        <span style={{
+          fontFamily: "var(--font-ui)", fontSize: 10,
+          letterSpacing: "0.2em", color: "var(--text-muted)",
+        }}>
+          06 — ACHIEVEMENTS
+        </span>
+        <div className="rule" style={{ flex: 1, background: "var(--border)" }} />
       </div>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .cp-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {achievements.map((a, i) => (
+          <div
+            key={a.id}
+            className="ach-item reveal"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "60px 1fr 80px",
+              gap: "clamp(16px, 3vw, 40px)",
+              alignItems: "center",
+              padding: "clamp(20px, 3vw, 28px) 0",
+              borderBottom: i < achievements.length - 1 ? "1px solid var(--border)" : "none",
+              transition: "opacity 0.3s",
+            }}
+          >
+            <span style={{
+              fontFamily: "var(--font-ui)",
+              fontSize: 10, letterSpacing: "0.12em",
+              color: "var(--text-muted)",
+            }}>
+              {String(i + 1).padStart(2, "0")}
+            </span>
+
+            <div>
+              <div style={{
+                fontFamily: "var(--font-body)",
+                fontSize: "clamp(15px, 1.6vw, 18px)",
+                fontWeight: 500,
+                color: "var(--text-primary)",
+                marginBottom: 6,
+              }}>
+                {a.title}
+              </div>
+              <div style={{
+                fontFamily: "var(--font-body)",
+                fontSize: "clamp(12px, 1.2vw, 14px)",
+                fontWeight: 300,
+                lineHeight: 1.55,
+                color: "var(--text-secondary)",
+              }}>
+                {a.description}
+              </div>
+            </div>
+
+            <span style={{
+              fontFamily: "var(--font-ui)",
+              fontSize: 10, letterSpacing: "0.1em",
+              color: "var(--text-muted)",
+              textAlign: "right",
+            }}>
+              {a.date}
+            </span>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
