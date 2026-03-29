@@ -1,7 +1,14 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { siteConfig, stats as defaultStats, bio as defaultBio, projects as defaultProjects, experience as defaultExperience, skills as defaultSkills } from '@/lib/data';
+import {
+  siteConfig,
+  stats as defaultStats,
+  bio as defaultBio,
+  projects as defaultProjects,
+  experience as defaultExperience,
+  skills as defaultSkills,
+} from '@/lib/data';
 
 const STORAGE_KEY = 'portfolio_data_override';
 
@@ -80,7 +87,7 @@ const defaultData: SiteData = {
     title: p.title,
     description: p.description,
     tech: p.tech,
-    purpose: (p as any).purpose || `Built to solve real-world problems using ${p.tech.slice(0, 2).join(' and ')}.`,
+    purpose: (p as any).purpose || `Built with ${p.tech.slice(0, 2).join(' and ')}.`,
     github: p.github || '',
     live: p.live || '',
     status: p.status,
@@ -105,6 +112,12 @@ const defaultData: SiteData = {
   },
 };
 
+function save(data: SiteData) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch {}
+}
+
 interface DataContextType {
   data: SiteData;
   updateHero: (hero: Partial<SiteData['hero']>) => void;
@@ -126,52 +139,67 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed = JSON.parse(stored) as Partial<SiteData>;
         setData(prev => ({ ...prev, ...parsed }));
       }
-    } catch {
-    }
-  }, []);
-
-  const persist = useCallback((updated: SiteData) => {
-    setData(updated);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-    } catch {
-    }
+    } catch {}
   }, []);
 
   const updateHero = useCallback((hero: Partial<SiteData['hero']>) => {
     setData(prev => {
-      const updated = { ...prev, hero: { ...prev.hero, ...hero } };
-      persist(updated);
-      return updated;
+      const next = { ...prev, hero: { ...prev.hero, ...hero } };
+      save(next);
+      return next;
     });
-  }, [persist]);
+  }, []);
 
   const updateBio = useCallback((bio: string[]) => {
-    setData(prev => { const u = { ...prev, bio }; persist(u); return u; });
-  }, [persist]);
+    setData(prev => {
+      const next = { ...prev, bio };
+      save(next);
+      return next;
+    });
+  }, []);
 
   const updateStats = useCallback((stats: StatData[]) => {
-    setData(prev => { const u = { ...prev, stats }; persist(u); return u; });
-  }, [persist]);
+    setData(prev => {
+      const next = { ...prev, stats };
+      save(next);
+      return next;
+    });
+  }, []);
 
   const updateProjects = useCallback((projects: ProjectData[]) => {
-    setData(prev => { const u = { ...prev, projects }; persist(u); return u; });
-  }, [persist]);
+    setData(prev => {
+      const next = { ...prev, projects };
+      save(next);
+      return next;
+    });
+  }, []);
 
   const updateExperience = useCallback((experience: ExperienceData[]) => {
-    setData(prev => { const u = { ...prev, experience }; persist(u); return u; });
-  }, [persist]);
+    setData(prev => {
+      const next = { ...prev, experience };
+      save(next);
+      return next;
+    });
+  }, []);
 
   const updateSkills = useCallback((skills: Record<string, string[]>) => {
-    setData(prev => { const u = { ...prev, skills }; persist(u); return u; });
-  }, [persist]);
+    setData(prev => {
+      const next = { ...prev, skills };
+      save(next);
+      return next;
+    });
+  }, []);
 
   const updateContact = useCallback((contact: Partial<SiteData['contact']>) => {
-    setData(prev => { const u = { ...prev, contact: { ...prev.contact, ...contact } }; persist(u); return u; });
-  }, [persist]);
+    setData(prev => {
+      const next = { ...prev, contact: { ...prev.contact, ...contact } };
+      save(next);
+      return next;
+    });
+  }, []);
 
   const resetToDefault = useCallback(() => {
     setData(defaultData);
@@ -180,8 +208,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DataContext.Provider value={{
-      data, updateHero, updateBio, updateStats, updateProjects,
-      updateExperience, updateSkills, updateContact, resetToDefault
+      data,
+      updateHero,
+      updateBio,
+      updateStats,
+      updateProjects,
+      updateExperience,
+      updateSkills,
+      updateContact,
+      resetToDefault,
     }}>
       {children}
     </DataContext.Provider>
