@@ -1,7 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Honk:MORF@15&family=Monofett&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap");
 @import "tailwindcss";
 
-/* ── Theme tokens injected from lib/theme.ts via layout ── */
 :root {
   --bg:           #0A0A0A;
   --surface:      #111111;
@@ -29,7 +28,6 @@
   --section-pad: clamp(80px, 12vw, 160px);
 }
 
-/* ── Reset ── */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -37,7 +35,6 @@
 }
 
 html {
-  /* Lenis handles scroll — do not set scroll-behavior here */
   scroll-padding-top: 0;
 }
 
@@ -52,10 +49,13 @@ body {
 
 * { cursor: none !important; }
 
-/* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 2px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--accent-alt); }
+
+/* ── No scrollbar utility ── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* ── Section reveal ── */
 .reveal {
@@ -83,7 +83,7 @@ body {
   transform: translateY(0);
 }
 
-/* ── Noise grain overlay (hero) ── */
+/* ── Noise grain overlay ── */
 .grain::after {
   content: "";
   position: absolute;
@@ -120,11 +120,154 @@ body {
   background: var(--border);
 }
 
-/* ── Section transition blur effects ── */
-.section-blur-exit {
-  filter: blur(8px);
+/* ─────────────────────────────────────
+   METEOR SHOWER
+───────────────────────────────────── */
+@keyframes meteor-fall {
+  0% {
+    transform: rotate(215deg) translateX(0);
+    opacity: 1;
+  }
+  70% { opacity: 0.8; }
+  100% {
+    transform: rotate(215deg) translateX(-600px);
+    opacity: 0;
+  }
 }
 
-.section-blur-enter {
-  filter: blur(0px);
+/* ─────────────────────────────────────
+   HERO ANIMATIONS
+───────────────────────────────────── */
+@keyframes heroFadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scrollPulse {
+  0%, 100% { transform: translateY(-100%); opacity: 0; }
+  40%, 60% { transform: translateY(0); opacity: 1; }
+  90%       { transform: translateY(100%); opacity: 0; }
+}
+
+/* ─────────────────────────────────────
+   FLICKER NAME ANIMATION
+───────────────────────────────────── */
+.flicker-name-wrapper {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0;
+}
+
+.flicker-char {
+  display: inline-block;
+  animation: flickerIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both,
+             flickerLoop 6s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 80ms), calc(0.8s + var(--i, 0) * 100ms);
+}
+
+@keyframes flickerIn {
+  0%   { opacity: 0; transform: scaleY(0.1) translateY(-20px); filter: blur(4px); }
+  50%  { opacity: 0.6; filter: blur(1px); }
+  70%  { opacity: 1; filter: blur(0px); }
+  85%  { opacity: 0.8; }
+  100% { opacity: 1; transform: scaleY(1) translateY(0); filter: blur(0px); }
+}
+
+@keyframes flickerLoop {
+  0%, 100% { opacity: 1; }
+  92%  { opacity: 1; }
+  93%  { opacity: 0.6; }
+  94%  { opacity: 1; }
+  96%  { opacity: 0.2; }
+  97%  { opacity: 1; }
+}
+
+/* ─────────────────────────────────────
+   JELLO TEXT ANIMATION
+───────────────────────────────────── */
+.jello-container {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0;
+}
+
+.jello-char {
+  display: inline-block;
+  animation: jelloEntrance 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: center bottom;
+}
+
+.jello-char:hover {
+  animation: jelloWobble 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes jelloEntrance {
+  0%   { opacity: 0; transform: translateY(20px) scaleY(0.5); }
+  60%  { transform: translateY(-4px) scaleY(1.1); }
+  80%  { transform: translateY(2px) scaleY(0.97); }
+  100% { opacity: 1; transform: translateY(0) scaleY(1); }
+}
+
+@keyframes jelloWobble {
+  0%   { transform: translateX(0) scaleY(1); }
+  15%  { transform: translateX(-4px) scaleY(1.2); }
+  30%  { transform: translateX(3px) scaleY(0.85); }
+  45%  { transform: translateX(-2px) scaleY(1.1); }
+  60%  { transform: translateX(1px) scaleY(0.95); }
+  75%  { transform: translateX(-1px) scaleY(1.02); }
+  100% { transform: translateX(0) scaleY(1); }
+}
+
+/* ─────────────────────────────────────
+   BOOK CARD HOVER
+───────────────────────────────────── */
+.book-card:hover .book-inner {
+  transform: rotateZ(-6deg);
+}
+
+.book-card:hover .book-cover {
+  transform: rotateY(-72deg);
+  box-shadow: -4px 4px 20px rgba(0,0,0,0.5);
+}
+
+/* ─────────────────────────────────────
+   LAYER SCROLL / PROJECT CARDS
+───────────────────────────────────── */
+@keyframes layerSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ─────────────────────────────────────
+   MODAL ANIMATION
+───────────────────────────────────── */
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.93) translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ─────────────────────────────────────
+   STAGGER REVEAL
+───────────────────────────────────── */
+.stagger-item.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.stagger-item.reveal.in-view {
+  opacity: 1;
+  transform: translateY(0);
 }

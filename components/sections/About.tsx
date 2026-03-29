@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { siteConfig, bio, stats } from "@/lib/data";
+import { useData } from "@/lib/context/DataContext";
 import { useReveal, useStaggerReveal } from "@/lib/useReveal";
 
 function useCountUp(target: number, duration = 1800, active = false) {
@@ -65,6 +65,7 @@ function StatItem({ value, suffix, label }: { value: number; suffix: string; lab
 }
 
 export default function About() {
+  const { data } = useData();
   const sectionRef = useReveal(0.1) as React.RefObject<HTMLElement>;
   const statsRef   = useStaggerReveal(".stagger-item", 0.2) as React.RefObject<HTMLElement>;
 
@@ -75,14 +76,8 @@ export default function About() {
       className="reveal"
       style={{ padding: "var(--section-pad) clamp(24px, 8vw, 120px)" }}
     >
-      {/* Section label */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 16, marginBottom: 64,
-      }}>
-        <span style={{
-          fontFamily: "var(--font-ui)", fontSize: 10,
-          letterSpacing: "0.2em", color: "var(--text-muted)",
-        }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 64 }}>
+        <span style={{ fontFamily: "var(--font-ui)", fontSize: 10, letterSpacing: "0.2em", color: "var(--text-muted)" }}>
           01 — ABOUT
         </span>
         <div className="rule" style={{ flex: 1, background: "var(--border)" }} />
@@ -107,14 +102,14 @@ export default function About() {
             Building things<br />that work.
           </h2>
 
-          {bio.map((p, i) => (
+          {data.bio.map((p, i) => (
             <p key={i} style={{
               fontFamily: "var(--font-body)",
               fontSize: "clamp(14px, 1.4vw, 16px)",
               fontWeight: 300,
               lineHeight: 1.75,
               color: "var(--text-secondary)",
-              marginBottom: i < bio.length - 1 ? 20 : 0,
+              marginBottom: i < data.bio.length - 1 ? 20 : 0,
             }}>
               {p}
             </p>
@@ -122,9 +117,9 @@ export default function About() {
 
           <div style={{ marginTop: 32, display: "flex", gap: 16, flexWrap: "wrap" }}>
             {[
-              { label: "GitHub", href: siteConfig.github },
-              { label: "LinkedIn", href: siteConfig.linkedin },
-              { label: "Codolio", href: siteConfig.codolio },
+              { label: "GitHub",   href: data.hero.github },
+              { label: "LinkedIn", href: data.hero.linkedin },
+              { label: "Codolio", href: data.hero.codolio },
             ].map((link) => (
               <a
                 key={link.label}
@@ -164,17 +159,16 @@ export default function About() {
             gap: "clamp(32px, 4vw, 56px)",
           }}
         >
-          {stats.map((s) => (
+          {data.stats.map((s) => (
             <StatItem key={s.label} value={s.value} suffix={s.suffix} label={s.label} />
           ))}
 
-          {/* Location */}
           <div style={{ gridColumn: "1 / -1", paddingTop: 24, borderTop: "1px solid var(--border)" }}>
             <span style={{
               fontFamily: "var(--font-ui)", fontSize: 10,
               letterSpacing: "0.14em", color: "var(--text-muted)",
             }}>
-              {siteConfig.location.toUpperCase()} — AVAILABLE FOR OPPORTUNITIES
+              {data.hero.location.toUpperCase()} — AVAILABLE FOR OPPORTUNITIES
             </span>
           </div>
         </div>

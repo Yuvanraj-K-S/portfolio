@@ -1,410 +1,454 @@
-    'use client';
+'use client';
 
-    import { useState } from 'react';
-    import { useProjects } from '../../lib/hooks/useFirestore';
-    import { Project } from '../../lib/types';
+import { useState, useRef } from 'react';
+import { useData, ProjectData } from '@/lib/context/DataContext';
 
-    interface BookCardProps {
-      project: Project;
-    }
+const PAGE_COLORS = [
+  'rgba(255,255,255,0.04)',
+  'rgba(255,255,255,0.06)',
+  'rgba(255,255,255,0.035)',
+];
 
-    function BookCard({ project }: BookCardProps) {
-      const [isExpanded, setIsExpanded] = useState(false);
-      const [currentPage, setCurrentPage] = useState(0);
+const COVER_GRADIENTS = [
+  'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+  'linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%)',
+  'linear-gradient(135deg, #16213e 0%, #0f3460 100%)',
+  'linear-gradient(135deg, #1a1a2e 0%, #162032 100%)',
+  'linear-gradient(135deg, #0d1117 0%, #1a1a2e 100%)',
+  'linear-gradient(135deg, #1e1e2e 0%, #0f3460 100%)',
+];
 
-      const totalPages = 3;
-      const pageTitles = ['Description', 'Technologies', 'Purpose'];
+interface BookCardProps {
+  project: ProjectData;
+  colorIndex: number;
+}
 
-      const handleNextPage = () => {
-        if (currentPage < totalPages - 1) {
-          setCurrentPage(currentPage + 1);
-        }
-      };
+function BookCard({ project, colorIndex }: BookCardProps) {
+  const [activePage, setActivePage] = useState<null | number>(null);
+  const [flippedPages, setFlippedPages] = useState<boolean[]>([false, false]);
+  const bookRef = useRef<HTMLDivElement>(null);
 
-      const handlePrevPage = () => {
-        if (currentPage > 0) {
-          setCurrentPage(currentPage - 1);
-        }
-      };
+  const gradient = COVER_GRADIENTS[colorIndex % COVER_GRADIENTS.length];
 
-      const handleClose = () => {
-        setIsExpanded(false);
-        setCurrentPage(0);
-      };
-
-      const handleBackdropClick = (e: React.MouseEvent) => {
-        if (e.target === e.currentTarget) {
-          handleClose();
-        }
-      };
-
-      const bookStyle = {
-        perspective: '600px',
-        transformOrigin: 'center'
-      };
-
-      const coverStyle = {
-        transformOrigin: '0',
-        transition: 'all 0.5s var(--ease)',
-        transform: isExpanded ? 'rotateY(-180deg)' : 'rotateY(0deg)'
-      };
-
-      const pageStyle = (pageIndex: number) => ({
-        position: 'absolute' as const,
-        width: '100%',
-        height: '100%',
-        backfaceVisibility: 'hidden' as const,
-        transform: `rotateY(${pageIndex * 180}deg)`,
-        transition: 'transform 0.6s var(--ease)',
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: '4px',
-        padding: '24px',
-        display: 'flex',
-        flexDirection: 'column' as const,
-        justifyContent: 'center'
-      });
-
-      const pagesContainerStyle = {
-        position: 'relative' as const,
-        width: '100%',
-        height: '100%',
-        transformStyle: 'preserve-3d' as const,
-        transform: `rotateY(${-currentPage * 180}deg)`,
-        transition: 'transform 0.6s var(--ease)'
-      };
-
-      const cardStyle = {
-        width: '200px',
-        height: '280px',
-        position: 'relative' as const,
-        transformStyle: 'preserve-3d' as const,
-        cursor: 'pointer',
-        margin: '16px'
-      };
-
-      const expandedCardStyle = {
-        width: '40vw',
-        height: '60vh',
-        maxWidth: '600px',
-        maxHeight: '500px',
-        position: 'fixed' as const,
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 1000,
-        margin: '0'
-      };
-
-      const backdropStyle = {
-        position: 'fixed' as const,
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        background: 'rgba(0, 0, 0, 0.8)',
-        zIndex: 999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      };
-
-      const coverContent = (
-        <div style={{
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          background: 'var(--surface-high)',
-          border: '1px solid var(--border)',
-          borderRadius: '4px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px',
-          backfaceVisibility: 'hidden' as const,
-          transform: 'rotateY(0deg)'
-        }}>
-          <h3 style={{
-            fontFamily: 'var(--font-ui)',
-            fontSize: '14px',
-            color: 'var(--text-primary)',
-            marginBottom: '8px',
-            textAlign: 'center'
-          }}>
+  const pages = [
+    {
+      label: 'Brief',
+      content: (
+        <div style={{ padding: '20px' }}>
+          <div style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.2em', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            BRIEF
+          </div>
+          <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '22px', color: 'var(--text-primary)', marginBottom: '12px', lineHeight: 1.1 }}>
             {project.title}
           </h3>
-          <div style={{
-            fontSize: '12px',
-            color: 'var(--text-secondary)',
-            textAlign: 'center'
-          }}>
-            {project.status}
-          </div>
-        </div>
-      );
-
-      const pageContent = [
-        // Page 1: Description
-        <div key="description">
-          <h2 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '24px',
-            color: 'var(--text-primary)',
-            marginBottom: '16px'
-          }}>
-            {project.title}
-          </h2>
-          <p style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: '16px',
-            lineHeight: '1.6',
-            color: 'var(--text-secondary)'
-          }}>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', lineHeight: 1.7, color: 'var(--text-secondary)' }}>
             {project.description}
           </p>
-        </div>,
-
-        // Page 2: Technologies
-        <div key="technologies">
-          <h2 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '24px',
-            color: 'var(--text-primary)',
-            marginBottom: '16px'
-          }}>
-            Technologies
-          </h2>
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}>
-            {project.technologies.map((tech, index) => (
-              <span key={index} style={{
-                background: 'var(--surface-high)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-                padding: '4px 12px',
-                fontSize: '12px',
-                color: 'var(--text-secondary)',
-                fontFamily: 'var(--font-ui)'
-              }}>
+          {(project.github || project.live) && (
+            <div style={{ marginTop: '16px', display: 'flex', gap: '12px' }}>
+              {project.github && (
+                <a href={project.github} target="_blank" rel="noopener noreferrer"
+                  style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.15em', color: 'var(--text-muted)', textDecoration: 'none', borderBottom: '1px solid var(--border)', paddingBottom: '2px' }}>
+                  GITHUB ↗
+                </a>
+              )}
+              {project.live && (
+                <a href={project.live} target="_blank" rel="noopener noreferrer"
+                  style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.15em', color: 'var(--text-muted)', textDecoration: 'none', borderBottom: '1px solid var(--border)', paddingBottom: '2px' }}>
+                  LIVE ↗
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      label: 'Stack',
+      content: (
+        <div style={{ padding: '20px' }}>
+          <div style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.2em', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            TECH STACK
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+            {project.tech.map((tech, i) => (
+              <span
+                key={i}
+                style={{
+                  padding: '4px 10px',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '4px',
+                  fontFamily: 'var(--font-ui)',
+                  fontSize: '10px',
+                  color: 'var(--text-secondary)',
+                  letterSpacing: '0.05em',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.12)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
                 {tech}
               </span>
             ))}
           </div>
-        </div>,
-
-        // Page 3: Purpose
-        <div key="purpose">
-          <h2 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '24px',
-            color: 'var(--text-primary)',
-            marginBottom: '16px'
-          }}>
-            Purpose
-          </h2>
-          {/* TODO: replace with project.purpose once added to Firestore */}
-          <p style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: '16px',
-            lineHeight: '1.6',
-            color: 'var(--text-secondary)'
-          }}>
-            Built with {project.technologies.join(', ')} to explore {project.title.toLowerCase()}.
+          <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.15em', color: 'var(--text-muted)' }}>STATUS</span>
+            <span style={{
+              fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.12em',
+              color: project.status === 'Production' ? '#4ade80' : project.status === 'Live' ? '#60a5fa' : 'var(--text-secondary)',
+              border: `1px solid ${project.status === 'Production' ? '#4ade8066' : project.status === 'Live' ? '#60a5fa66' : 'var(--border)'}`,
+              padding: '2px 8px', borderRadius: '4px',
+            }}>
+              {project.status.toUpperCase()}
+            </span>
+          </div>
+        </div>
+      ),
+    },
+    {
+      label: 'Purpose',
+      content: (
+        <div style={{ padding: '20px' }}>
+          <div style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.2em', color: 'var(--text-muted)', marginBottom: '12px' }}>
+            INTENTION
+          </div>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', lineHeight: 1.8, color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+            "{project.purpose}"
           </p>
+          <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border)' }}>
+            <span style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.15em', color: 'var(--text-muted)' }}>
+              {project.category.toUpperCase()} PROJECT
+            </span>
+          </div>
         </div>
-      ];
+      ),
+    },
+  ];
 
-      const bookCard = (
-        <div style={isExpanded ? expandedCardStyle : cardStyle}>
-          <div style={bookStyle}>
-            {/* Cover */}
-            <div style={coverStyle}>
-              {coverContent}
-            </div>
+  const handlePageFlip = (pageIdx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (activePage === null) {
+      setActivePage(pageIdx);
+    } else if (activePage === pageIdx) {
+      setActivePage(null);
+    } else {
+      setActivePage(pageIdx);
+    }
+  };
 
-            {/* Pages Container */}
-            <div style={pagesContainerStyle}>
-              {pageContent.map((content, pageIndex) => (
-                <div key={pageIndex} style={pageStyle(pageIndex)}>
-                  {content}
-                </div>
-              ))}
-            </div>
+  return (
+    <>
+      <div
+        ref={bookRef}
+        className="book-card"
+        style={{
+          position: 'relative',
+          width: '200px',
+          height: '280px',
+          perspective: '800px',
+          flexShrink: 0,
+        }}
+      >
+        <div
+          className="book-inner"
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            transformStyle: 'preserve-3d',
+            transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1)',
+          }}
+        >
+          {/* Book body (back pages stacked) */}
+          {[2, 1].map(offset => (
+            <div
+              key={offset}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '10px',
+                background: PAGE_COLORS[offset],
+                border: '1px solid rgba(255,255,255,0.07)',
+                transform: `translateX(${offset * 2}px) translateY(${offset * 2}px)`,
+                zIndex: offset,
+              }}
+            />
+          ))}
 
-            {/* Navigation buttons (only visible when expanded) */}
-            {isExpanded && (
-              <>
-                {/* Previous button */}
-                {currentPage > 0 && (
-                  <button
-                    onClick={handlePrevPage}
-                    style={{
-                      position: 'absolute',
-                      left: '-40px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'var(--surface-high)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '50%',
-                      width: '32px',
-                      height: '32px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      color: 'var(--text-primary)',
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '16px'
-                    }}
-                  >
-                    ←
-                  </button>
-                )}
-
-                {/* Next button */}
-                {currentPage < totalPages - 1 && (
-                  <button
-                    onClick={handleNextPage}
-                    style={{
-                      position: 'absolute',
-                      right: '-40px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'var(--surface-high)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '50%',
-                      width: '32px',
-                      height: '32px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      color: 'var(--text-primary)',
-                      fontFamily: 'var(--font-ui)',
-                      fontSize: '16px'
-                    }}
-                  >
-                    →
-                  </button>
-                )}
-
-                {/* Close button */}
-                <button
-                  onClick={handleClose}
-                  style={{
-                    position: 'absolute',
-                    top: '-40px',
-                    right: '0',
-                    background: 'var(--surface-high)',
-                    border: '1px solid var(--border)',
-                    borderRadius: '4px',
-                    padding: '8px 16px',
-                    cursor: 'pointer',
-                    color: 'var(--text-primary)',
+          {/* Cover */}
+          <div
+            className="book-cover"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '10px',
+              background: gradient,
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '2px 4px 20px rgba(0,0,0,0.6)',
+              zIndex: 10,
+              transformOrigin: 'left center',
+              transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: '9px',
+                letterSpacing: '0.25em',
+                color: 'rgba(255,255,255,0.4)',
+                marginBottom: '12px',
+              }}>
+                {project.category.toUpperCase()}
+              </div>
+              <div style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '20px',
+                color: 'rgba(255,255,255,0.9)',
+                lineHeight: 1.1,
+                marginBottom: '16px',
+              }}>
+                {project.title}
+              </div>
+              <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                {project.tech.slice(0, 2).map((t, i) => (
+                  <span key={i} style={{
                     fontFamily: 'var(--font-ui)',
-                    fontSize: '12px'
-                  }}
-                >
-                  ✕
-                </button>
-
-                {/* Page indicator */}
-                <div style={{
-                  position: 'absolute',
-                  bottom: '-40px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  color: 'var(--text-muted)',
-                  fontFamily: 'var(--font-ui)',
-                  fontSize: '12px'
-                }}>
-                  {pageTitles[currentPage]} ({currentPage + 1}/{totalPages})
-                </div>
-              </>
-            )}
+                    fontSize: '8px',
+                    letterSpacing: '0.1em',
+                    color: 'rgba(255,255,255,0.5)',
+                    background: 'rgba(255,255,255,0.08)',
+                    padding: '3px 8px',
+                    borderRadius: '3px',
+                  }}>{t}</span>
+                ))}
+              </div>
+              <div style={{
+                marginTop: '24px',
+                fontFamily: 'var(--font-ui)',
+                fontSize: '8px',
+                letterSpacing: '0.2em',
+                color: 'rgba(255,255,255,0.25)',
+              }}>
+                HOVER TO OPEN
+              </div>
+            </div>
           </div>
+
+          {/* Pages (revealed when cover opens) */}
+          {pages.map((page, pageIdx) => (
+            <div
+              key={pageIdx}
+              onClick={(e) => handlePageFlip(pageIdx, e)}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '10px',
+                background: activePage === pageIdx ? 'var(--surface-high)' : 'var(--surface)',
+                border: '1px solid var(--border)',
+                boxShadow: activePage === pageIdx ? '4px 8px 30px rgba(0,0,0,0.5)' : '2px 4px 12px rgba(0,0,0,0.3)',
+                zIndex: 3 + pageIdx,
+                transformOrigin: 'left center',
+                transition: 'all 0.5s cubic-bezier(0.16,1,0.3,1)',
+                transform: activePage !== null && activePage >= pageIdx
+                  ? `rotateY(-160deg) translateZ(${pageIdx * 4}px)`
+                  : `translateZ(${pageIdx * 1}px)`,
+                cursor: 'pointer',
+                overflow: 'hidden',
+              }}
+            >
+              {/* Page tab label */}
+              <div style={{
+                position: 'absolute',
+                top: '12px',
+                right: '12px',
+                fontFamily: 'var(--font-ui)',
+                fontSize: '8px',
+                letterSpacing: '0.15em',
+                color: 'var(--text-muted)',
+                zIndex: 1,
+              }}>
+                {String(pageIdx + 1).padStart(2, '0')}
+              </div>
+              {/* Expand hint on hover */}
+              <div
+                className="page-content"
+                style={{
+                  height: '100%',
+                  transition: 'transform 0.3s ease',
+                  overflow: 'auto',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.02)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                {page.content}
+              </div>
+              {/* Page edge line */}
+              <div style={{
+                position: 'absolute',
+                left: 0,
+                top: '10%',
+                bottom: '10%',
+                width: '3px',
+                background: 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.1), transparent)',
+              }} />
+            </div>
+          ))}
         </div>
-      );
 
-      if (isExpanded) {
-        return (
-          <div style={backdropStyle} onClick={handleBackdropClick}>
-            {bookCard}
-          </div>
-        );
-      }
-
-      return (
-        <div onClick={() => setIsExpanded(true)}>
-          {bookCard}
-        </div>
-      );
-    }
-
-    export default function Projects() {
-      const { data: projects, loading, error } = useProjects();
-
-      if (loading) {
-        return (
+        {/* Page navigator dots */}
+        {activePage !== null && (
           <div style={{
+            position: 'absolute',
+            bottom: '-28px',
+            left: '50%',
+            transform: 'translateX(-50%)',
             display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '400px',
-            color: 'var(--text-secondary)',
-            fontFamily: 'var(--font-body)'
+            gap: '6px',
+            zIndex: 20,
           }}>
-            Loading projects...
-          </div>
-        );
-      }
-
-      if (error || !projects) {
-        return (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            minHeight: '400px',
-            color: 'var(--text-muted)',
-            fontFamily: 'var(--font-body)'
-          }}>
-            No projects available.
-          </div>
-        );
-      }
-
-      return (
-        <section style={{
-          padding: 'var(--section-pad)',
-          minHeight: '100vh'
-        }}>
-          <h2 style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: '48px',
-            color: 'var(--text-primary)',
-            marginBottom: '48px',
-            textAlign: 'center'
-          }}>
-            Projects
-          </h2>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            justifyContent: 'center',
-            gap: '16px',
-            maxWidth: '1200px',
-            margin: '0 auto'
-          }}>
-            {projects.map((project) => (
-              <BookCard key={project.id} project={project} />
+            {pages.map((p, i) => (
+              <button
+                key={i}
+                onClick={() => setActivePage(i === activePage ? null : i)}
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  background: activePage === i ? 'var(--text-primary)' : 'var(--border)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                  transition: 'background 0.2s',
+                }}
+              />
             ))}
+            <button
+              onClick={() => setActivePage(null)}
+              style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                background: 'rgba(255,100,100,0.5)',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                marginLeft: '4px',
+              }}
+              title="Close"
+            />
           </div>
-        </section>
-      );
-    }
+        )}
+      </div>
+    </>
+  );
+}
+
+export default function Projects() {
+  const { data } = useData();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setStartX(e.pageX - (scrollRef.current?.offsetLeft || 0));
+    setScrollLeft(scrollRef.current?.scrollLeft || 0);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !scrollRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - (scrollRef.current.offsetLeft || 0);
+    const walk = (x - startX) * 1.5;
+    scrollRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
+
+  return (
+    <section
+      id="projects"
+      style={{ padding: 'var(--section-pad) 0', minHeight: '100vh', overflow: 'hidden' }}
+    >
+      <div style={{ padding: '0 clamp(24px, 8vw, 120px)', marginBottom: '64px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+          <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '0.2em', color: 'var(--text-muted)' }}>
+            03 — PROJECTS
+          </span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+        </div>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(36px, 6vw, 72px)', color: 'var(--text-primary)', lineHeight: 1 }}>
+          Things I&apos;ve Built
+        </h2>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-muted)', marginTop: '12px' }}>
+          Hover cards to open · Click pages to flip · Drag to scroll
+        </p>
+      </div>
+
+      {/* Scrollable layer container */}
+      <div
+        ref={scrollRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{
+          display: 'flex',
+          gap: '48px',
+          padding: '40px clamp(24px, 8vw, 120px) 80px',
+          overflowX: 'auto',
+          cursor: isDragging ? 'grabbing' : 'grab',
+          userSelect: 'none',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
+          alignItems: 'flex-start',
+        }}
+        className="no-scrollbar"
+      >
+        {data.projects.map((project, i) => (
+          <div
+            key={project.id}
+            style={{
+              opacity: 0,
+              animation: `layerSlideIn 0.6s cubic-bezier(0.16,1,0.3,1) ${i * 0.1}s forwards`,
+            }}
+          >
+            <BookCard project={project} colorIndex={i} />
+          </div>
+        ))}
+      </div>
+
+      {/* Background scroll indicator */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', paddingBottom: '16px' }}>
+        {data.projects.map((_, i) => (
+          <div
+            key={i}
+            style={{
+              width: i === 0 ? '20px' : '6px',
+              height: '3px',
+              borderRadius: '2px',
+              background: i === 0 ? 'var(--text-primary)' : 'var(--border)',
+              transition: 'all 0.3s ease',
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}

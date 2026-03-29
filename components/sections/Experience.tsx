@@ -1,286 +1,264 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useExperience } from '../../lib/hooks/useFirestore';
-import { Experience } from '../../lib/types';
+import { useRef, useEffect, useState } from 'react';
+import { useData, ExperienceData } from '@/lib/context/DataContext';
 
-interface ExperienceNodeProps {
-  experience: Experience;
-  index: number;
-  totalNodes: number;
-  isLeft: boolean;
-  nodeY: number;
-  isVisible: boolean;
-  delay: number;
-}
+function RoadNode({ exp, index, isLeft }: { exp: ExperienceData; index: number; isLeft: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-function ExperienceNode({ experience, index, totalNodes, isLeft, nodeY, isVisible, delay }: ExperienceNodeProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  
-  const nodeStyle = {
-    position: 'absolute' as const,
-    left: isLeft ? '50%' : '50%',
-    transform: isLeft ? 'translateX(-50%)' : 'translateX(-50%)',
-    top: `${nodeY}px`,
-    opacity: isVisible ? 1 : 0,
-    transition: `opacity 0.5s ease ${delay}ms`,
-    zIndex: 10
-  };
-
-  const circleStyle = {
-    width: '16px',
-    height: '16px',
-    background: 'var(--surface-high)',
-    border: '2px solid var(--border)',
-    borderRadius: '50%',
-    position: 'absolute' as const,
-    left: '50%',
-    top: '50%',
-    transform: 'translate(-50%, -50%)',
-    cursor: 'pointer',
-    zIndex: 2
-  };
-
-  const cardStyle = {
-    position: 'absolute' as const,
-    width: '320px',
-    background: 'var(--surface)',
-    border: '1px solid var(--border)',
-    borderRadius: '8px',
-    padding: '20px',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    ...(isLeft ? { right: '40px' } : { left: '40px' }),
-    transition: 'all 0.3s var(--ease)',
-    cursor: 'pointer'
-  };
-
-  const expandedCardStyle = {
-    ...cardStyle,
-    maxHeight: isExpanded ? '500px' : '72px',
-    overflow: 'hidden'
-  };
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold: 0.2 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <div style={nodeStyle}>
-      {/* Timeline circle */}
-      <div style={circleStyle} />
-      
-      {/* Experience card */}
-      <div 
-        style={expandedCardStyle}
-        onMouseEnter={() => setIsExpanded(true)}
-        onMouseLeave={() => setIsExpanded(false)}
+    <div
+      ref={ref}
+      style={{
+        display: 'flex',
+        justifyContent: isLeft ? 'flex-start' : 'flex-end',
+        position: 'relative',
+        width: '100%',
+        marginBottom: '80px',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateX(0)' : `translateX(${isLeft ? '-40px' : '40px'})`,
+        transition: `opacity 0.7s ease ${index * 0.15}s, transform 0.7s cubic-bezier(0.16,1,0.3,1) ${index * 0.15}s`,
+      }}
+    >
+      {/* Card */}
+      <div
+        style={{
+          width: 'calc(50% - 60px)',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          padding: '24px',
+          cursor: 'pointer',
+          transition: 'all 0.3s var(--ease)',
+          boxShadow: expanded ? '0 8px 40px rgba(0,0,0,0.4)' : '0 2px 12px rgba(0,0,0,0.2)',
+          position: 'relative',
+        }}
+        onMouseEnter={() => setExpanded(true)}
+        onMouseLeave={() => setExpanded(false)}
       >
+        {/* Road marker connector */}
         <div style={{
-          fontFamily: 'var(--font-ui)',
-          fontSize: '14px',
-          color: 'var(--text-primary)',
-          marginBottom: '4px',
-          fontWeight: 'bold'
-        }}>
-          {experience.role}
-        </div>
+          position: 'absolute',
+          top: '50%',
+          [isLeft ? 'right' : 'left']: '-60px',
+          width: '60px',
+          height: '2px',
+          background: 'linear-gradient(to right, transparent, var(--border))',
+          transform: 'translateY(-50%)',
+        }} />
+
+        {/* Node dot */}
         <div style={{
-          fontFamily: 'var(--font-body)',
-          fontSize: '12px',
-          color: 'var(--text-secondary)',
-          marginBottom: isExpanded ? '12px' : '0'
-        }}>
-          {experience.company} • {experience.duration}
+          position: 'absolute',
+          top: '50%',
+          [isLeft ? 'right' : 'left']: '-68px',
+          width: '16px',
+          height: '16px',
+          borderRadius: '50%',
+          background: expanded ? 'var(--text-primary)' : 'var(--surface-high)',
+          border: '2px solid var(--border)',
+          transform: 'translateY(-50%)',
+          transition: 'all 0.3s ease',
+          boxShadow: expanded ? '0 0 12px rgba(240,240,240,0.3)' : 'none',
+          zIndex: 5,
+        }} />
+
+        <div style={{ fontFamily: 'var(--font-ui)', fontSize: '9px', letterSpacing: '0.2em', color: 'var(--text-muted)', marginBottom: '8px' }}>
+          {exp.duration}
         </div>
-        
-        {/* Expanded details */}
-        {isExpanded && (
-          <div style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: '13px',
-            lineHeight: '1.5',
-            color: 'var(--text-secondary)'
-          }}>
-            {experience.description.map((desc, idx) => (
-              <div key={idx} style={{
-                marginBottom: '8px',
-                paddingLeft: '16px',
-                position: 'relative'
-              }}>
-                <span style={{
-                  position: 'absolute' as const,
-                  left: '0',
-                  color: 'var(--text-muted)'
-                }}>
-                  •
-                </span>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: '20px', color: 'var(--text-primary)', marginBottom: '4px', lineHeight: 1.1 }}>
+          {exp.role}
+        </div>
+        <div style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: expanded ? '16px' : '0', transition: 'margin 0.3s ease' }}>
+          {exp.company} {exp.location ? `· ${exp.location}` : ''}
+        </div>
+
+        <div style={{
+          maxHeight: expanded ? '400px' : '0',
+          overflow: 'hidden',
+          transition: 'max-height 0.5s cubic-bezier(0.16,1,0.3,1)',
+        }}>
+          {exp.description.map((desc, i) => (
+            <div key={i} style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+              <span style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: '2px', fontSize: '10px' }}>▸</span>
+              <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', lineHeight: 1.65, color: 'var(--text-secondary)' }}>
                 {desc}
-              </div>
-            ))}
-          </div>
-        )}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
-// Generate SVG path dynamically based on node count
-function generateTimelinePath(nodeCount: number): string {
-  if (nodeCount === 0) return '';
-  
-  const nodeSpacing = 120; // Consistent spacing between nodes
-  const amplitude = 40; // Wave amplitude
-  
-  let path = `M 50 ${nodeSpacing}`; // Start at first node
-  
-  for (let i = 1; i <= nodeCount; i++) {
-    const currentY = i * nodeSpacing;
-    const prevY = (i - 1) * nodeSpacing;
-    
-    // Control points for cubic bezier
-    const cx1 = 50 + (i % 2 === 0 ? amplitude : -amplitude);
-    const cy1 = prevY + nodeSpacing * 0.3;
-    const cx2 = 50 + (i % 2 === 0 ? -amplitude : amplitude);
-    const cy2 = currentY - nodeSpacing * 0.3;
-    
-    path += ` C ${cx1} ${cy1}, ${cx2} ${cy2}, 50 ${currentY}`;
-  }
-  
-  return path;
-}
-
 export default function Experience() {
-  const { data: experiences, loading, error } = useExperience();
-  const [pathLength, setPathLength] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const pathRef = useRef<SVGPathElement>(null);
+  const { data } = useData();
+  const roadRef = useRef<SVGPathElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const [roadProgress, setRoadProgress] = useState(0);
 
   useEffect(() => {
-    if (pathRef.current) {
-      const length = pathRef.current.getTotalLength();
-      setPathLength(length);
-    }
-  }, [experiences]);
+    const section = sectionRef.current;
+    if (!section) return;
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-        }
-      },
-      { threshold: 0.1 }
-    );
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        let start: number | null = null;
+        const animate = (ts: number) => {
+          if (!start) start = ts;
+          const progress = Math.min((ts - start) / 1500, 1);
+          setRoadProgress(progress);
+          if (progress < 1) requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
 
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
-    }
-
+    observer.observe(section);
     return () => observer.disconnect();
   }, []);
 
-  if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '400px',
-        color: 'var(--text-secondary)',
-        fontFamily: 'var(--font-body)'
-      }}>
-        Loading experience...
-      </div>
-    );
-  }
+  const nodeCount = data.experience.length;
+  const nodeSpacing = 160;
+  const totalHeight = (nodeCount + 1) * nodeSpacing;
 
-  if (error || !experiences) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '400px',
-        color: 'var(--text-muted)',
-        fontFamily: 'var(--font-body)'
-      }}>
-        No experience data available.
-      </div>
-    );
+  let roadPath = `M 50 20`;
+  for (let i = 0; i < nodeCount; i++) {
+    const y = (i + 1) * nodeSpacing;
+    const prevY = i * nodeSpacing + 20;
+    const cpX = 50 + (i % 2 === 0 ? 30 : -30);
+    roadPath += ` C ${cpX} ${prevY + nodeSpacing * 0.4}, ${cpX} ${y - nodeSpacing * 0.4}, 50 ${y}`;
   }
-
-  const nodeCount = experiences.length;
-  const nodeSpacing = 120; // Consistent spacing between nodes
-  const totalHeight = (nodeCount + 1) * nodeSpacing; // Dynamic total height
-  const timelinePath = generateTimelinePath(nodeCount);
+  roadPath += ` C 50 ${totalHeight - 30}, 50 ${totalHeight - 10}, 50 ${totalHeight}`;
 
   return (
-    <section 
+    <section
+      id="experience"
       ref={sectionRef}
-      style={{
-        padding: 'var(--section-pad)',
-        minHeight: '100vh',
-        position: 'relative',
-        height: 'auto',
-        paddingBottom: `${totalHeight + 100}px` // Extra padding for last node
-      }}
+      style={{ padding: 'var(--section-pad) clamp(24px, 8vw, 120px)', minHeight: '100vh', position: 'relative' }}
     >
-      <h2 style={{
-        fontFamily: 'var(--font-display)',
-        fontSize: '48px',
-        color: 'var(--text-primary)',
-        marginBottom: '48px',
-        textAlign: 'center'
-      }}>
-        Experience
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 64 }}>
+        <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '0.2em', color: 'var(--text-muted)' }}>
+          02 — EXPERIENCE
+        </span>
+        <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+      </div>
+
+      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(36px, 6vw, 72px)', color: 'var(--text-primary)', marginBottom: '80px', lineHeight: 1 }}>
+        The Road So Far
       </h2>
 
-      {/* SVG Timeline */}
-      <svg
-        ref={svgRef}
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: '0',
-          transform: 'translateX(-50%)',
-          width: '100px',
-          height: `${totalHeight}px`,
-          pointerEvents: 'none',
-          zIndex: 1
-        }}
-      >
-        <path
-          ref={pathRef}
-          d={timelinePath}
-          stroke="var(--border)"
-          strokeWidth="2"
-          fill="none"
+      <div style={{ position: 'relative' }}>
+        {/* SVG Road */}
+        <svg
           style={{
-            strokeDasharray: pathLength,
-            strokeDashoffset: isVisible ? 0 : pathLength,
-            transition: 'stroke-dashoffset 2s ease-out'
+            position: 'absolute',
+            left: '50%',
+            top: 0,
+            transform: 'translateX(-50%)',
+            width: '100px',
+            height: `${totalHeight}px`,
+            pointerEvents: 'none',
+            zIndex: 1,
           }}
-        />
-      </svg>
-
-      {/* Experience Nodes */}
-      {experiences.map((experience, index) => {
-        const nodeY = (index + 1) * nodeSpacing;
-        const isLeft = index % 2 === 0;
-        const delay = (index / nodeCount) * 2000 + 200; // Proportional to path position
-        
-        return (
-          <ExperienceNode
-            key={experience.id}
-            experience={experience}
-            index={index}
-            totalNodes={nodeCount}
-            isLeft={isLeft}
-            nodeY={nodeY}
-            isVisible={isVisible}
-            delay={delay}
+          viewBox={`0 0 100 ${totalHeight}`}
+          preserveAspectRatio="none"
+        >
+          {/* Road base (wide) */}
+          <path
+            d={roadPath}
+            stroke="var(--surface-high)"
+            strokeWidth="20"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           />
-        );
-      })}
+          {/* Road border left */}
+          <path
+            d={roadPath}
+            stroke="rgba(255,255,255,0.06)"
+            strokeWidth="22"
+            fill="none"
+            strokeLinecap="round"
+          />
+          {/* Road fill */}
+          <path
+            d={roadPath}
+            stroke="var(--surface-high)"
+            strokeWidth="18"
+            fill="none"
+            strokeLinecap="round"
+          />
+          {/* Center dashed line */}
+          {roadRef && (
+            <path
+              ref={roadRef}
+              d={roadPath}
+              stroke="rgba(255,255,255,0.12)"
+              strokeWidth="2"
+              fill="none"
+              strokeDasharray="8 10"
+              strokeLinecap="round"
+            />
+          )}
+          {/* Animated progress line */}
+          <path
+            d={roadPath}
+            stroke="rgba(255,255,255,0.35)"
+            strokeWidth="2"
+            fill="none"
+            strokeDasharray={`${roadProgress * 2000} 2000`}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dasharray 0.1s linear' }}
+          />
+        </svg>
+
+        {/* Experience Nodes */}
+        <div style={{ position: 'relative', zIndex: 2, paddingTop: '0' }}>
+          {data.experience.map((exp, index) => (
+            <RoadNode
+              key={exp.id}
+              exp={exp}
+              index={index}
+              isLeft={index % 2 === 0}
+            />
+          ))}
+        </div>
+
+        {/* Road end marker */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '24px',
+          height: '24px',
+          borderRadius: '50%',
+          border: '2px solid var(--border)',
+          background: 'var(--bg)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 5,
+        }}>
+          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--text-muted)' }} />
+        </div>
+      </div>
     </section>
   );
 }

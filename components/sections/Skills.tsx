@@ -1,257 +1,156 @@
 'use client';
 
-import { useSkills } from '../../lib/hooks/useFirestore';
-import { Skill } from '../../lib/types';
+import { useRef, useEffect, useState } from 'react';
+import { useData } from '@/lib/context/DataContext';
 
-// Deterministic hash function for consistent rotations/offsets
-function hashCode(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return Math.abs(hash);
-}
+const CATEGORY_COLORS: Record<string, { border: string; label: string; dot: string }> = {
+  Languages:  { border: 'rgba(251,191,36,0.25)',  label: 'rgba(251,191,36,0.7)',  dot: '#fbbf24' },
+  Frontend:   { border: 'rgba(96,165,250,0.25)',  label: 'rgba(96,165,250,0.7)',  dot: '#60a5fa' },
+  Backend:    { border: 'rgba(74,222,128,0.25)',  label: 'rgba(74,222,128,0.7)',  dot: '#4ade80' },
+  'ML / AI':  { border: 'rgba(167,139,250,0.25)', label: 'rgba(167,139,250,0.7)', dot: '#a78bfa' },
+  NLP:        { border: 'rgba(251,113,133,0.25)', label: 'rgba(251,113,133,0.7)', dot: '#fb7185' },
+  Cloud:      { border: 'rgba(34,211,238,0.25)',  label: 'rgba(34,211,238,0.7)',  dot: '#22d3ee' },
+};
 
-// Derive deterministic values from category name
-function deriveCategoryValues(category: string) {
-  const hash = hashCode(category);
-  const seed = hash % 1000;
-  
-  // Rotation between -12 and +12 degrees
-  const rotation = (seed % 25) - 12;
-  
-  // X and Y offsets for organic placement
-  const xOffset = (seed % 20) - 10; // -10 to +10
-  const yOffset = (seed % 16) - 8;  // -8 to +8
-  
-  // Position percentages for corkboard layout
-  const left = 2 + (seed % 64); // 2% to 65%
-  const top = 2 + (seed % 54);  // 2% to 55%
-  
-  return { rotation, xOffset, yOffset, seed, left, top };
-}
+const DEFAULT_COLORS = { border: 'rgba(255,255,255,0.1)', label: 'rgba(255,255,255,0.4)', dot: '#ffffff' };
 
-interface StickyNoteProps {
-  category: string;
-  skills: Skill[];
-}
+function SkillCategory({ category, skills, index }: { category: string; skills: string[]; index: number }) {
+  const [visible, setVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const colors = CATEGORY_COLORS[category] || DEFAULT_COLORS;
 
-function StickyNote({ category, skills }: StickyNoteProps) {
-  const { rotation, xOffset, yOffset, seed, left, top } = deriveCategoryValues(category);
-  
-  const noteStyle = {
-    position: 'absolute' as const,
-    width: '280px',
-    minHeight: '200px',
-    background: 'var(--surface-high)',
-    border: '1px solid var(--border)',
-    borderRadius: '2px',
-    padding: '20px',
-    left: `${left}%`,
-    top: `${top}%`,
-    transform: `translate(${xOffset}px, ${yOffset}px) rotate(${rotation}deg)`,
-    transition: 'transform 0.3s var(--ease), box-shadow 0.3s var(--ease)',
-    cursor: 'pointer'
-  };
-
-  const noteHoverStyle = {
-    ...noteStyle,
-    transform: `translate(${xOffset}px, ${yOffset - 8}px) rotate(0deg)`,
-    boxShadow: '0 0 32px rgba(240,240,240,0.08)'
-  };
-
-  const pinStyle = {
-    position: 'absolute' as const,
-    top: '-8px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: '16px',
-    height: '16px',
-    background: 'var(--accent)',
-    borderRadius: '50%',
-    border: '2px solid var(--surface-high)',
-    zIndex: 2
-  };
-
-  const pinWobbleKeyframes = `
-    @keyframes pin-wobble-${seed} {
-      0%, 100% { transform: translateX(-50%) rotate(0deg); }
-      25% { transform: translateX(-50%) rotate(3deg); }
-      50% { transform: translateX(-50%) rotate(-2deg); }
-      75% { transform: translateX(-50%) rotate(1deg); }
-    }
-  `;
-
-  const skillTagStyle = {
-    display: 'inline-block',
-    margin: '4px',
-    padding: '6px 12px',
-    background: 'var(--surface)',
-    border: '1px solid var(--border)',
-    borderRadius: '12px',
-    fontSize: '12px',
-    color: 'var(--text-secondary)',
-    fontFamily: 'var(--font-ui)',
-    transition: 'all 0.2s var(--ease)'
-  };
-
-  const skillTagHoverStyle = {
-    ...skillTagStyle,
-    transform: 'scale(1.05)',
-    borderColor: 'rgba(240,240,240,0.4)',
-    animation: 'pulse 2s ease-in-out infinite'
-  };
-
-  const pulseKeyframes = `
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-  `;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <>
-      <style>{pinWobbleKeyframes}{pulseKeyframes}</style>
-      <div 
-        style={noteStyle}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = `translate(${xOffset}px, ${yOffset - 8}px) rotate(0deg)`;
-          e.currentTarget.style.boxShadow = '0 0 32px rgba(240,240,240,0.08)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = `translate(${xOffset}px, ${yOffset}px) rotate(${rotation}deg)`;
-          e.currentTarget.style.boxShadow = 'none';
-        }}
-      >
-        {/* Pin */}
-        <div 
-          style={{
-            ...pinStyle,
-            animation: `pin-wobble-${seed} 3s ease-in-out infinite`
-          }}
-        />
+    <div
+      ref={ref}
+      style={{
+        background: 'var(--surface)',
+        border: `1px solid ${colors.border}`,
+        borderRadius: '12px',
+        padding: '24px',
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.97)',
+        transition: `opacity 0.6s ease ${index * 0.08}s, transform 0.6s cubic-bezier(0.16,1,0.3,1) ${index * 0.08}s`,
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Subtle background glow */}
+      <div style={{
+        position: 'absolute',
+        top: '-30%',
+        right: '-20%',
+        width: '120px',
+        height: '120px',
+        borderRadius: '50%',
+        background: colors.dot,
+        opacity: 0.04,
+        filter: 'blur(30px)',
+        pointerEvents: 'none',
+      }} />
 
-        {/* Category header */}
-        <h3 style={{
+      {/* Category header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: colors.dot, flexShrink: 0 }} />
+        <span style={{
           fontFamily: 'var(--font-ui)',
-          fontSize: '16px',
-          color: 'var(--text-primary)',
-          marginBottom: '16px',
-          textAlign: 'center'
+          fontSize: '10px',
+          letterSpacing: '0.2em',
+          color: colors.label,
         }}>
-          {category}
-        </h3>
-
-        {/* Skills list */}
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '4px',
-          justifyContent: 'center'
+          {category.toUpperCase()}
+        </span>
+        <span style={{
+          marginLeft: 'auto',
+          fontFamily: 'var(--font-ui)',
+          fontSize: '9px',
+          color: 'var(--text-muted)',
         }}>
-          {skills.map((skill) => (
-            <span
-              key={skill.id}
-              style={skillTagStyle}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.borderColor = 'rgba(240,240,240,0.4)';
-                e.currentTarget.style.animation = 'pulse 2s ease-in-out infinite';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.borderColor = 'var(--border)';
-                e.currentTarget.style.animation = 'none';
-              }}
-            >
-              {skill.name}
-            </span>
-          ))}
-        </div>
+          {skills.length}
+        </span>
       </div>
-    </>
+
+      {/* Skills */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {skills.map((skill, i) => (
+          <span
+            key={i}
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: '12px',
+              color: 'var(--text-secondary)',
+              background: 'var(--surface-high)',
+              border: `1px solid ${colors.border}`,
+              borderRadius: '6px',
+              padding: '5px 12px',
+              transition: 'all 0.25s ease',
+              cursor: 'default',
+              display: 'inline-block',
+              opacity: visible ? 1 : 0,
+              transform: visible ? 'translateY(0)' : 'translateY(8px)',
+              transitionDelay: `${index * 0.08 + i * 0.04}s`,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = `rgba(${colors.dot.slice(1).match(/.{2}/g)?.map(h => parseInt(h, 16)).join(',')},0.15)`;
+              e.currentTarget.style.borderColor = colors.dot;
+              e.currentTarget.style.color = 'var(--text-primary)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'var(--surface-high)';
+              e.currentTarget.style.borderColor = colors.border;
+              e.currentTarget.style.color = 'var(--text-secondary)';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            {skill}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
 export default function Skills() {
-  const { data: skills, loading, error } = useSkills();
-
-  if (loading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '400px',
-        color: 'var(--text-secondary)',
-        fontFamily: 'var(--font-body)'
-      }}>
-        Loading skills...
-      </div>
-    );
-  }
-
-  if (error || !skills) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '400px',
-        color: 'var(--text-muted)',
-        fontFamily: 'var(--font-body)'
-      }}>
-        No skills available.
-      </div>
-    );
-  }
-
-  // Group skills by category
-  const skillsByCategory = skills.reduce((acc, skill) => {
-    if (!acc[skill.category]) {
-      acc[skill.category] = [];
-    }
-    acc[skill.category].push(skill);
-    return acc;
-  }, {} as Record<string, Skill[]>);
-
-  const categories = Object.keys(skillsByCategory);
+  const { data } = useData();
+  const categories = Object.entries(data.skills);
 
   return (
-    <section style={{
-      padding: 'var(--section-pad)',
-      minHeight: '100vh',
-      position: 'relative'
-    }}>
-      <h2 style={{
-        fontFamily: 'var(--font-display)',
-        fontSize: '48px',
-        color: 'var(--text-primary)',
-        marginBottom: '48px',
-        textAlign: 'center'
-      }}>
-        Skills
-      </h2>
+    <section
+      id="skills"
+      style={{ padding: 'var(--section-pad) clamp(24px, 8vw, 120px)', minHeight: '100vh' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 64 }}>
+        <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '0.2em', color: 'var(--text-muted)' }}>
+          04 — SKILLS
+        </span>
+        <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+      </div>
 
-      {/* Corkboard container */}
+      <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(36px, 6vw, 72px)', color: 'var(--text-primary)', marginBottom: '16px', lineHeight: 1 }}>
+        Tools &amp; Technologies
+      </h2>
+      <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--text-muted)', marginBottom: '56px' }}>
+        {categories.reduce((acc, [, s]) => acc + s.length, 0)} skills across {categories.length} domains
+      </p>
+
       <div style={{
-        position: 'relative',
-        width: '100%',
-        height: '800px',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: '8px'
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: '20px',
       }}>
-        {categories.map((category) => (
-          <StickyNote
-            key={category}
-            category={category}
-            skills={skillsByCategory[category]}
-          />
+        {categories.map(([category, skillList], i) => (
+          <SkillCategory key={category} category={category} skills={skillList} index={i} />
         ))}
       </div>
     </section>
