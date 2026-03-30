@@ -3,10 +3,8 @@
 import { useRef, useState, useEffect } from 'react';
 import { useData } from '@/lib/context/DataContext';
 
-// Each note's tilt angle — readable range roughly ±15deg
 const NOTE_ROTATIONS = [-11, 7, -4, 12, -8, 5];
 
-// Vertical / horizontal nudge to break the grid look
 const NOTE_OFFSETS: { x: number; y: number }[] = [
   { x: 0,   y: 14  },
   { x: 10,  y: -18 },
@@ -16,26 +14,25 @@ const NOTE_OFFSETS: { x: number; y: number }[] = [
   { x: 4,   y: -22 },
 ];
 
-// Pastel paper colors — pop against the dark background
-const NOTE_PALETTE = [
-  { bg: '#fef08a', pin: '#ef4444', accent: '#a16207', text: '#1c1917', line: '#ca8a0422', margin: 'rgba(220,38,38,0.25)' },  // yellow
-  { bg: '#bfdbfe', pin: '#3b82f6', accent: '#1e40af', text: '#1e3a5f', line: '#1e40af22', margin: 'rgba(220,38,38,0.25)' },  // blue
-  { bg: '#bbf7d0', pin: '#16a34a', accent: '#15803d', text: '#14532d', line: '#15803d22', margin: 'rgba(220,38,38,0.25)' },  // green
-  { bg: '#e9d5ff', pin: '#9333ea', accent: '#7e22ce', text: '#3b0764', line: '#7e22ce22', margin: 'rgba(220,38,38,0.25)' },  // purple
-  { bg: '#fecdd3', pin: '#e11d48', accent: '#be123c', text: '#4c0519', line: '#be123c22', margin: 'rgba(220,38,38,0.25)' },  // pink/rose
-  { bg: '#a5f3fc', pin: '#0891b2', accent: '#0e7490', text: '#083344', line: '#0e749022', margin: 'rgba(220,38,38,0.25)' },  // cyan
-];
+const CATEGORY_GLOW: Record<string, { glow: string; label: string; dot: string }> = {
+  Languages: { glow: 'rgba(251,191,36,0.18)',  label: 'rgba(251,191,36,0.75)',  dot: '#fbbf24' },
+  Frontend:  { glow: 'rgba(96,165,250,0.18)',  label: 'rgba(96,165,250,0.75)',  dot: '#60a5fa' },
+  Backend:   { glow: 'rgba(74,222,128,0.18)',  label: 'rgba(74,222,128,0.75)',  dot: '#4ade80' },
+  'ML / AI': { glow: 'rgba(167,139,250,0.18)', label: 'rgba(167,139,250,0.75)', dot: '#a78bfa' },
+  NLP:       { glow: 'rgba(251,113,133,0.18)', label: 'rgba(251,113,133,0.75)', dot: '#fb7185' },
+  Cloud:     { glow: 'rgba(34,211,238,0.18)',  label: 'rgba(34,211,238,0.75)',  dot: '#22d3ee' },
+};
 
-// Three positional "templates" so every note looks different inside
-// Each entry = { top, left, rot } for up to 5 tags
-// Note usable area: top 44–220px, left 32–190px. Max-width kept at 80px per tag.
+const DEFAULT_COLOR = { glow: 'rgba(255,255,255,0.08)', label: 'rgba(255,255,255,0.4)', dot: '#fff' };
+
+// Three scattered-position templates for tags inside each card
 const TAG_TEMPLATES: { top: number; left: number; rot: number }[][] = [
   [
     { top: 48,  left: 36,  rot: -4 },
     { top: 54,  left: 118, rot:  6 },
     { top: 102, left: 42,  rot: -7 },
     { top: 108, left: 115, rot:  3 },
-    { top: 160, left: 52,  rot:  5 },
+    { top: 158, left: 52,  rot:  5 },
   ],
   [
     { top: 46,  left: 114, rot:  5 },
@@ -53,21 +50,18 @@ const TAG_TEMPLATES: { top: number; left: number; rot: number }[][] = [
   ],
 ];
 
-type Palette = typeof NOTE_PALETTE[0];
-
-interface StickyNoteProps {
-  category: string;
-  skills: string[];
-  palette: Palette;
-  rotation: number;
-  offset: { x: number; y: number };
-  index: number;
-}
-
-function StickyNote({ category, skills, palette, rotation, offset, index }: StickyNoteProps) {
+function SkillCard({
+  category, skills, index,
+}: {
+  category: string; skills: string[]; index: number;
+}) {
   const [hovered, setHovered] = useState(false);
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const colors = CATEGORY_GLOW[category] ?? DEFAULT_COLOR;
+  const rotation = NOTE_ROTATIONS[index % NOTE_ROTATIONS.length];
+  const offset   = NOTE_OFFSETS[index % NOTE_OFFSETS.length];
+  const template = TAG_TEMPLATES[index % TAG_TEMPLATES.length];
 
   useEffect(() => {
     const el = ref.current;
@@ -80,10 +74,9 @@ function StickyNote({ category, skills, palette, rotation, offset, index }: Stic
     return () => obs.disconnect();
   }, []);
 
-  const template = TAG_TEMPLATES[index % TAG_TEMPLATES.length];
-  const activeRot = hovered ? rotation * 0.25 : rotation;
-  const activeY   = hovered ? offset.y - 12 : offset.y;
-  const activeScale = hovered ? 1.07 : 1;
+  const activeRot   = hovered ? rotation * 0.2  : rotation;
+  const activeY     = hovered ? offset.y - 14   : offset.y;
+  const activeScale = hovered ? 1.06 : 1;
 
   return (
     <div
@@ -92,117 +85,102 @@ function StickyNote({ category, skills, palette, rotation, offset, index }: Stic
       onMouseLeave={() => setHovered(false)}
       style={{
         position: 'relative',
-        width: 216,
-        height: 236,
+        width: 210,
+        height: 228,
         flexShrink: 0,
+        zIndex: hovered ? 10 : 1,
         opacity: visible ? 1 : 0,
         transform: visible
           ? `rotate(${activeRot}deg) translate(${offset.x}px, ${activeY}px) scale(${activeScale})`
-          : `rotate(${rotation}deg) translate(${offset.x}px, ${offset.y + 32}px) scale(0.88)`,
+          : `rotate(${rotation}deg) translate(${offset.x}px, ${offset.y + 30}px) scale(0.88)`,
         transition: [
-          `opacity 0.5s ease ${index * 0.11}s`,
-          `transform ${hovered ? '0.35s cubic-bezier(0.34,1.56,0.64,1)' : `0.5s cubic-bezier(0.34,1.56,0.64,1) ${index * 0.11}s`}`,
+          `opacity 0.5s ease ${index * 0.1}s`,
+          `transform ${hovered
+            ? '0.38s cubic-bezier(0.34,1.56,0.64,1)'
+            : `0.55s cubic-bezier(0.34,1.56,0.64,1) ${index * 0.1}s`}`,
         ].join(', '),
         cursor: 'default',
-        zIndex: hovered ? 10 : 1,
       }}
     >
-      {/* Push pin */}
+      {/* Glow halo */}
       <div style={{
         position: 'absolute',
-        top: -12,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 20,
-      }}>
-        <div style={{
-          width: 18,
-          height: 18,
-          borderRadius: '50%',
-          background: `radial-gradient(circle at 38% 35%, ${palette.pin}dd, ${palette.pin})`,
-          boxShadow: `0 3px 8px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.35)`,
-        }} />
-        <div style={{
-          width: 2,
-          height: 8,
-          background: 'rgba(0,0,0,0.35)',
-          borderRadius: '0 0 1px 1px',
-          margin: '-2px auto 0',
-        }} />
-      </div>
+        inset: -20,
+        borderRadius: 24,
+        background: `radial-gradient(ellipse at 50% 50%, ${colors.glow}, transparent 70%)`,
+        opacity: hovered ? 1 : 0.55,
+        transition: 'opacity 0.4s ease',
+        pointerEvents: 'none',
+        filter: 'blur(6px)',
+      }} />
 
-      {/* Paper body */}
+      {/* Card surface */}
       <div style={{
         position: 'absolute',
         inset: 0,
-        background: palette.bg,
-        borderRadius: '2px 3px 3px 2px',
+        borderRadius: 12,
+        background: 'var(--surface)',
+        border: `1px solid ${hovered ? colors.dot + '55' : 'rgba(255,255,255,0.07)'}`,
         boxShadow: hovered
-          ? `0 20px 48px rgba(0,0,0,0.55), 0 8px 20px rgba(0,0,0,0.3), 4px 4px 0 rgba(0,0,0,0.1)`
-          : `0 8px 20px rgba(0,0,0,0.45), 0 3px 8px rgba(0,0,0,0.25), 3px 3px 0 rgba(0,0,0,0.08)`,
-        transition: 'box-shadow 0.3s ease',
+          ? `0 20px 48px rgba(0,0,0,0.6), 0 0 0 1px ${colors.dot}22, inset 0 1px 0 rgba(255,255,255,0.06)`
+          : `0 6px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)`,
+        transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
         overflow: 'hidden',
       }}>
 
-        {/* Paper texture — ruled lines */}
-        {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} style={{
-            position: 'absolute',
-            left: 30,
-            right: 10,
-            top: 44 + i * 26,
-            height: 1,
-            background: palette.line,
-          }} />
-        ))}
-
-        {/* Red margin line */}
+        {/* Top accent bar */}
         <div style={{
           position: 'absolute',
-          left: 30,
-          top: 40,
-          bottom: 10,
-          width: 1,
-          background: palette.margin,
+          top: 0, left: 0, right: 0,
+          height: 2,
+          borderRadius: '12px 12px 0 0',
+          background: `linear-gradient(90deg, transparent, ${colors.dot}88, transparent)`,
+          opacity: hovered ? 1 : 0.4,
+          transition: 'opacity 0.3s ease',
         }} />
 
-        {/* Bottom-right fold crease */}
+        {/* Category header */}
         <div style={{
           position: 'absolute',
-          bottom: 0,
-          right: 0,
-          width: 0,
-          height: 0,
-          borderStyle: 'solid',
-          borderWidth: '0 0 22px 22px',
-          borderColor: `transparent transparent rgba(0,0,0,0.13) transparent`,
-        }} />
-
-        {/* Category heading */}
-        <div style={{
-          position: 'absolute',
-          top: 10,
-          left: 12,
-          right: 12,
-          fontFamily: '"Caveat", cursive, var(--font-display)',
-          fontSize: 17,
-          fontWeight: 700,
-          color: palette.accent,
-          letterSpacing: '0.02em',
-          paddingBottom: 7,
-          borderBottom: `1.5px solid ${palette.accent}66`,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
+          top: 14,
+          left: 16,
+          right: 16,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 7,
+          paddingBottom: 10,
+          borderBottom: `1px solid rgba(255,255,255,0.07)`,
         }}>
-          {category}
+          <div style={{
+            width: 5, height: 5,
+            borderRadius: '50%',
+            background: colors.dot,
+            flexShrink: 0,
+            boxShadow: `0 0 6px ${colors.dot}`,
+          }} />
+          <span style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 9,
+            letterSpacing: '0.22em',
+            color: colors.label,
+          }}>
+            {category.toUpperCase()}
+          </span>
+          <span style={{
+            marginLeft: 'auto',
+            fontFamily: 'var(--font-ui)',
+            fontSize: 8,
+            color: 'var(--text-muted)',
+          }}>
+            {skills.length}
+          </span>
         </div>
 
-        {/* Tech tags — scattered at randomized positions */}
+        {/* Tech tags — scattered */}
         {skills.map((skill, i) => {
-          const pos = template[i] ?? { top: 48 + i * 34, left: 36, rot: 0 };
+          const pos = template[i] ?? { top: 50 + i * 32, left: 36, rot: 0 };
           return (
-            <div
+            <span
               key={skill}
               style={{
                 position: 'absolute',
@@ -210,19 +188,18 @@ function StickyNote({ category, skills, palette, rotation, offset, index }: Stic
                 left: pos.left,
                 transform: `rotate(${pos.rot}deg)`,
                 transformOrigin: 'left top',
-                fontFamily: '"Caveat", cursive, var(--font-display)',
-                fontSize: 14,
-                fontWeight: 500,
-                color: palette.text,
-                maxWidth: 84,
-                lineHeight: 1.2,
-                letterSpacing: '0.01em',
-                userSelect: 'none',
+                fontFamily: 'var(--font-body)',
+                fontSize: 12.5,
+                fontWeight: 400,
+                color: 'var(--text-secondary)',
+                letterSpacing: '0.02em',
                 whiteSpace: 'nowrap',
+                userSelect: 'none',
+                transition: 'color 0.2s ease',
               }}
             >
               {skill}
-            </div>
+            </span>
           );
         })}
       </div>
@@ -240,7 +217,6 @@ export default function Skills() {
       id="skills"
       style={{ padding: 'var(--section-pad) clamp(24px, 8vw, 120px)', minHeight: '100vh' }}
     >
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 48 }}>
         <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '0.2em', color: 'var(--text-muted)' }}>
           04 — SKILLS
@@ -263,10 +239,9 @@ export default function Skills() {
         color: 'var(--text-muted)',
         marginBottom: 72,
       }}>
-        {totalSkills} skills across {categories.length} domains — hover a note to lift it
+        {totalSkills} skills across {categories.length} domains
       </p>
 
-      {/* Sticky notes board */}
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
@@ -277,13 +252,10 @@ export default function Skills() {
         paddingBottom: 80,
       }}>
         {categories.map(([category, skillList], i) => (
-          <StickyNote
+          <SkillCard
             key={category}
             category={category}
             skills={skillList}
-            palette={NOTE_PALETTE[i % NOTE_PALETTE.length]}
-            rotation={NOTE_ROTATIONS[i % NOTE_ROTATIONS.length]}
-            offset={NOTE_OFFSETS[i % NOTE_OFFSETS.length]}
             index={i}
           />
         ))}
