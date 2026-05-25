@@ -1,52 +1,68 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# See https://help.github.com/articles/ignoring-files/
 
-# dependencies
+# Dependencies
 /node_modules
 /.pnp
-<<<<<<< HEAD
 .pnp.*
+.pnp.js
+
+# Yarn
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-=======
-.pnp.js
->>>>>>> 333274533b7630143d520bc4ef307d440f2b6051
 
-# testing
+# pnpm
+.pnpm-debug.log*
+
+# npm
+npm-debug.log*
+
+# Yarn logs
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
 /coverage
 
-# next.js
+# Next.js
 /.next/
 /out/
 
-# production
+# Build output
 /build
+/dist
 
-# misc
-.DS_Store
+# Production
 *.pem
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-<<<<<<< HEAD
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-=======
-
-# local env files
-.env*.local
+# Environment variables
 .env
->>>>>>> 333274533b7630143d520bc4ef307d440f2b6051
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
 
-# vercel
+# Vercel
 .vercel
 
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Cache
+.eslintcache
+.cache/
+
+# Misc
+*.log
