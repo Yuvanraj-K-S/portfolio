@@ -1,385 +1,166 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
-const STAR_POSITIONS = [
-  { top: '15%', left: '10%' }, { top: '45%', left: '25%' },
-  { top: '25%', left: '55%' }, { top: '60%', left: '80%' },
-  { top: '10%', left: '70%' }, { top: '75%', left: '40%' },
-  { top: '35%', left: '90%' }
+const BOOT_LINES = [
+  { text: '> initializing portfolio...', delay: 0 },
+  { text: '> loading experience........... [OK]', delay: 420 },
+  { text: '> compiling projects........... [OK]', delay: 800 },
+  { text: '> rendering skills............. [OK]', delay: 1160 },
+  { text: '> establishing contact......... [OK]', delay: 1500 },
+  { text: '> WELCOME.', delay: 1820, highlight: true },
 ];
 
 export default function Loader() {
-  const [isMounted, setIsMounted] = useState(true);
-  const [isFading, setIsFading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [visibleLines, setVisibleLines] = useState<number[]>([]);
+  const [exiting, setExiting] = useState(false);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
-    // Start progress bar animation
-    progressIntervalRef.current = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          if (progressIntervalRef.current) {
-            clearInterval(progressIntervalRef.current);
-          }
-          return 100;
-        }
-        return prev + (100 / 15); // 100% over 1500ms (60fps = 15 intervals per 250ms)
-      });
-    }, 25); // Update every 25ms for smooth animation
+    const timers: NodeJS.Timeout[] = [];
 
-    // Auto-fade after 1500ms minimum
-    fadeTimeoutRef.current = setTimeout(() => {
-      setIsFading(true);
-      setTimeout(() => setIsMounted(false), 600);
-    }, 1500);
+    BOOT_LINES.forEach((line, i) => {
+      timers.push(setTimeout(() => {
+        setVisibleLines(prev => [...prev, i]);
+      }, line.delay));
+    });
 
-    return () => {
-      if (progressIntervalRef.current) {
-        clearInterval(progressIntervalRef.current);
-      }
-      if (fadeTimeoutRef.current) {
-        clearTimeout(fadeTimeoutRef.current);
-      }
-    };
-  }, []);
+    timers.push(setTimeout(() => setExiting(true), 2400));
+    timers.push(setTimeout(() => setDone(true), 3200));
 
-  useEffect(() => {
     const handleSkip = () => {
-      if (isMounted && !isFading) {
-        if (progressIntervalRef.current) {
-          clearInterval(progressIntervalRef.current);
-        }
-        if (fadeTimeoutRef.current) {
-          clearTimeout(fadeTimeoutRef.current);
-        }
-        setProgress(100);
-        setIsFading(true);
-        setTimeout(() => setIsMounted(false), 600);
-      }
+      timers.forEach(clearTimeout);
+      setVisibleLines(BOOT_LINES.map((_, i) => i));
+      setExiting(true);
+      setTimeout(() => setDone(true), 700);
     };
 
-    // Add event listeners for skip
     window.addEventListener('click', handleSkip);
     window.addEventListener('keydown', handleSkip);
 
     return () => {
+      timers.forEach(clearTimeout);
       window.removeEventListener('click', handleSkip);
       window.removeEventListener('keydown', handleSkip);
     };
-  }, [isMounted, isFading]);
+  }, []);
 
-  if (!isMounted) {
-    return null;
-  }
+  if (done) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      background: 'var(--bg)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 9999,
-      opacity: isFading ? 0 : 1,
-      transition: 'opacity 600ms ease-out'
-    }}>
-      {/* Astronaut and Stars */}
-      <div className="box-of-star1">
-        {STAR_POSITIONS.map((pos, i) => (
-          <div key={`star1-${i}`} className="star" style={{ 
-            position: 'absolute',
-            top: pos.top,
-            left: pos.left,
-            width: '2px',
-            height: '2px',
-            background: 'white',
-            borderRadius: '50%',
-            animation: `starAnimation 2s infinite ${i * 0.3}s`
-          }} />
-        ))}
-      </div>
-      <div className="box-of-star2">
-        {STAR_POSITIONS.map((pos, i) => (
-          <div key={`star2-${i}`} className="star" style={{ 
-            position: 'absolute',
-            top: pos.top,
-            left: pos.left,
-            width: '2px',
-            height: '2px',
-            background: 'white',
-            borderRadius: '50%',
-            animation: `starAnimation 2s infinite ${i * 0.3}s`
-          }} />
-        ))}
-      </div>
-      <div className="box-of-star3">
-        {STAR_POSITIONS.map((pos, i) => (
-          <div key={`star3-${i}`} className="star" style={{ 
-            position: 'absolute',
-            top: pos.top,
-            left: pos.left,
-            width: '2px',
-            height: '2px',
-            background: 'white',
-            borderRadius: '50%',
-            animation: `starAnimation 2s infinite ${i * 0.3}s`
-          }} />
-        ))}
-      </div>
-      <div className="box-of-star4">
-        {STAR_POSITIONS.map((pos, i) => (
-          <div key={`star4-${i}`} className="star" style={{ 
-            position: 'absolute',
-            top: pos.top,
-            left: pos.left,
-            width: '2px',
-            height: '2px',
-            background: 'white',
-            borderRadius: '50%',
-            animation: `starAnimation 2s infinite ${i * 0.3}s`
-          }} />
-        ))}
-      </div>
+    <AnimatePresence>
+      {!exiting ? (
+        <motion.div
+          key="terminal"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'var(--bg)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <div style={{
+            width: 'min(520px, 90vw)',
+            fontFamily: 'var(--font-ui)',
+            fontSize: 'clamp(11px, 1.5vw, 13px)',
+            letterSpacing: '0.03em',
+          }}>
+            {/* Terminal chrome */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 16,
+              paddingBottom: 12,
+              borderBottom: '1px solid var(--border)',
+            }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5f57' }} />
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#febc2e' }} />
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#28c840' }} />
+              <span style={{ marginLeft: 8, color: 'var(--text-muted)', fontSize: 10, letterSpacing: '0.15em' }}>
+                portfolio.sh — bash
+              </span>
+            </div>
 
-      {/* Astronaut */}
-      <div className="astronaut">
-        <div className="head"></div>
-        <div className="arm arm-left"></div>
-        <div className="arm arm-right"></div>
-        <div className="body">
-          <div className="panel"></div>
-        </div>
-        <div className="leg leg-left"></div>
-        <div className="leg leg-right"></div>
-        <div className="schoolbag"></div>
-      </div>
+            {/* Boot lines */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {BOOT_LINES.map((line, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={visibleLines.includes(i) ? { opacity: 1, x: 0 } : {}}
+                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                  style={{
+                    color: line.highlight ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    fontWeight: line.highlight ? 500 : 400,
+                    fontSize: line.highlight ? 'clamp(14px, 2vw, 16px)' : undefined,
+                    letterSpacing: line.highlight ? '0.2em' : undefined,
+                  }}
+                >
+                  {line.text}
+                  {/* Blinking cursor on last visible line */}
+                  {i === Math.max(...visibleLines, -1) && !line.highlight && (
+                    <motion.span
+                      animate={{ opacity: [1, 0] }}
+                      transition={{ repeat: Infinity, duration: 0.6 }}
+                      style={{ display: 'inline-block', width: 7, height: '1em', background: 'var(--text-secondary)', marginLeft: 3, verticalAlign: 'middle' }}
+                    />
+                  )}
+                </motion.div>
+              ))}
+            </div>
 
-      {/* Progress Bar */}
-      <div style={{
-        position: 'absolute',
-        bottom: '60px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '200px',
-        height: '1px',
-        background: 'var(--surface-high)'
-      }}>
-        <div style={{
-          width: `${progress}%`,
-          height: '100%',
-          background: 'var(--text-primary)',
-          transition: 'width 0.1s ease-out'
-        }} />
-      </div>
-
-      {/* Skip Label */}
-      <div style={{
-        position: 'absolute',
-        bottom: '30px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        fontFamily: 'var(--font-ui)',
-        fontSize: '10px',
-        color: 'var(--text-muted)'
-      }}>
-        CLICK ANYWHERE TO SKIP
-      </div>
-
-      {/* CSS Animations */}
-      <style>{`
-        .box-of-star1,
-        .box-of-star2,
-        .box-of-star3,
-        .box-of-star4 {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          pointer-events: none;
-        }
-
-        @keyframes starAnimation {
-          0% { opacity: 0; transform: translateY(0); }
-          50% { opacity: 1; transform: translateY(-20px); }
-          100% { opacity: 0; transform: translateY(-40px); }
-        }
-
-        .astronaut {
-          position: relative;
-          width: 60px;
-          height: 80px;
-          animation: float 4s ease-in-out infinite;
-        }
-
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-20px); }
-        }
-
-        .head {
-          position: absolute;
-          top: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 30px;
-          height: 30px;
-          background: #f5f5f5;
-          border-radius: 50%;
-          border: 2px solid #333;
-        }
-
-        .head::before {
-          content: '';
-          position: absolute;
-          top: 5px;
-          left: 5px;
-          width: 8px;
-          height: 8px;
-          background: #333;
-          border-radius: 50%;
-        }
-
-        .head::after {
-          content: '';
-          position: absolute;
-          top: 5px;
-          right: 5px;
-          width: 8px;
-          height: 8px;
-          background: #333;
-          border-radius: 50%;
-        }
-
-        .body {
-          position: absolute;
-          top: 25px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 40px;
-          height: 35px;
-          background: #f5f5f5;
-          border: 2px solid #333;
-          border-radius: 10px 10px 5px 5px;
-        }
-
-        .panel {
-          position: absolute;
-          top: 5px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 20px;
-          height: 15px;
-          background: #333;
-          border-radius: 3px;
-        }
-
-        .panel::before {
-          content: '';
-          position: absolute;
-          top: 2px;
-          left: 2px;
-          width: 4px;
-          height: 4px;
-          background: #0f0;
-          border-radius: 50%;
-          animation: blink 1s infinite;
-        }
-
-        .panel::after {
-          content: '';
-          position: absolute;
-          top: 2px;
-          right: 2px;
-          width: 4px;
-          height: 4px;
-          background: #f00;
-          border-radius: 50%;
-          animation: blink 1s infinite 0.5s;
-        }
-
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-
-        .arm {
-          position: absolute;
-          width: 8px;
-          height: 25px;
-          background: #f5f5f5;
-          border: 2px solid #333;
-          border-radius: 10px;
-        }
-
-        .arm-left {
-          top: 28px;
-          left: 8px;
-          transform: rotate(-30deg);
-          transform-origin: top center;
-          animation: armSwing 2s ease-in-out infinite;
-        }
-
-        .arm-right {
-          top: 28px;
-          right: 8px;
-          transform: rotate(30deg);
-          transform-origin: top center;
-          animation: armSwing 2s ease-in-out infinite 1s;
-        }
-
-        @keyframes armSwing {
-          0%, 100% { transform: rotate(-30deg); }
-          50% { transform: rotate(10deg); }
-        }
-
-        .leg {
-          position: absolute;
-          width: 10px;
-          height: 20px;
-          background: #f5f5f5;
-          border: 2px solid #333;
-          border-radius: 5px;
-        }
-
-        .leg-left {
-          bottom: 0;
-          left: 15px;
-          transform: rotate(-10deg);
-          transform-origin: top center;
-          animation: legSwing 1.5s ease-in-out infinite;
-        }
-
-        .leg-right {
-          bottom: 0;
-          right: 15px;
-          transform: rotate(10deg);
-          transform-origin: top center;
-          animation: legSwing 1.5s ease-in-out infinite 0.75s;
-        }
-
-        @keyframes legSwing {
-          0%, 100% { transform: rotate(-10deg); }
-          50% { transform: rotate(10deg); }
-        }
-
-        .schoolbag {
-          position: absolute;
-          top: 30px;
-          right: -5px;
-          width: 15px;
-          height: 20px;
-          background: #333;
-          border-radius: 5px;
-          border: 2px solid #555;
-        }
-      `}</style>
-    </div>
+            {/* Skip hint */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              style={{
+                marginTop: 32,
+                color: 'var(--text-muted)',
+                fontSize: 9,
+                letterSpacing: '0.2em',
+              }}
+            >
+              CLICK ANYWHERE TO SKIP
+            </motion.div>
+          </div>
+        </motion.div>
+      ) : (
+        <>
+          {/* Curtain wipe — two panels slide off */}
+          <motion.div
+            key="curtain-left"
+            initial={{ x: 0 }}
+            animate={{ x: '-100%' }}
+            transition={{ duration: 0.75, ease: [0.76, 0, 0.24, 1] }}
+            style={{
+              position: 'fixed',
+              top: 0, left: 0,
+              width: '50%', height: '100%',
+              background: 'var(--bg)',
+              zIndex: 9998,
+            }}
+          />
+          <motion.div
+            key="curtain-right"
+            initial={{ x: 0 }}
+            animate={{ x: '100%' }}
+            transition={{ duration: 0.75, ease: [0.76, 0, 0.24, 1] }}
+            style={{
+              position: 'fixed',
+              top: 0, right: 0,
+              width: '50%', height: '100%',
+              background: 'var(--bg)',
+              zIndex: 9998,
+            }}
+          />
+        </>
+      )}
+    </AnimatePresence>
   );
 }
